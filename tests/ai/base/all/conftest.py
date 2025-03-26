@@ -3,19 +3,29 @@ from typing import Iterator
 import pytest
 from ampf.local import LocalFactory
 
-from haintech.ai import AIChatSession, BaseAIAgent, BaseAIChat, BaseAIModel, BaseAITextEmbeddingModel
-from haintech.ai.google_generativeai import GoogleAIModel
-from haintech.ai.google_generativeai import GoogleAITextEmbeddingModel
+from haintech.ai import (
+    AIChatSession,
+    BaseAIAgent,
+    BaseAIChat,
+    BaseAIModel,
+    BaseAITextEmbeddingModel,
+)
+from haintech.ai.deep_seek.deepseek_ai_model import DeepSeekAIModel
+from haintech.ai.google_generativeai import GoogleAIModel, GoogleAITextEmbeddingModel
 from haintech.ai.open_ai import OpenAIModel, OpenAITextEmbeddingModel
 
 
-@pytest.fixture(params=[OpenAIModel, GoogleAIModel], scope="session")
+@pytest.fixture(params=[OpenAIModel, GoogleAIModel, DeepSeekAIModel], scope="session")
 def ai_model(request: pytest.FixtureRequest) -> BaseAIModel:
     return request.param(parameters={"temperature": 0})
 
-@pytest.fixture(params=[OpenAITextEmbeddingModel, GoogleAITextEmbeddingModel], scope="session")
+
+@pytest.fixture(
+    params=[OpenAITextEmbeddingModel, GoogleAITextEmbeddingModel], scope="session"
+)
 def ai_embedding_model(request: pytest.FixtureRequest) -> BaseAITextEmbeddingModel:
     return request.param()
+
 
 @pytest.fixture
 def ai_chat(ai_model: BaseAIModel) -> BaseAIChat:

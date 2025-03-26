@@ -114,6 +114,7 @@ def test_supervisor_with_without_acceptance_agent_call(
         or "need" in response.content
         or "don't have" in response.content
         or "can't" in response.content
+        or "couldn't" in response.content
     )
 
 

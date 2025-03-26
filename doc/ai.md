@@ -1,5 +1,11 @@
 # AI package
 
+Implementations of `BaseAIModel`:
+
+* OpenAIModel()
+* GoogleAIModel()
+* DeepSeekAIModel()
+
 ## Model classes
 
 ### AIPrompt
