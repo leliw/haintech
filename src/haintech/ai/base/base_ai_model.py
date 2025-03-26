@@ -21,6 +21,7 @@ class BaseAIModel(ABC):
     def get_chat_response(
         self,
         message: AIModelInteractionMessage = None,
+        prompt: AIPrompt = None,
         context: str | AIPrompt = None,
         history: Iterator[AIModelInteractionMessage] = None,
         functions: Dict[Callable, Any] = None,

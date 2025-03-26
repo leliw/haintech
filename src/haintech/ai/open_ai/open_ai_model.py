@@ -41,6 +41,7 @@ class OpenAIModel(BaseAIModel):
     def get_chat_response(
         self,
         message: str | AIModelInteractionMessage = None,
+        prompt: AIPrompt = None,
         context: str | AIPrompt = None,
         history: Iterator[AIModelInteractionMessage] = None,
         functions: Dict[str, FunctionDefinition] = None,
@@ -50,7 +51,10 @@ class OpenAIModel(BaseAIModel):
         if not isinstance(history, list):
             history = list(history)
         msg_list = [self._create_message(m) for m in history]
-        context = self._prompt_to_str(context) if context else None
+        if prompt:
+            context = self._prompt_to_str(prompt)
+        else:
+            context = self._prompt_to_str(context) if context else None
         if context:
             msg_list.insert(
                 0,
@@ -92,7 +96,8 @@ class OpenAIModel(BaseAIModel):
                 AIModelInteraction(
                     model=self.model_name,
                     message=message,
-                    context=context,
+                    prompt=prompt,
+                    context=context if not prompt else None,
                     history=history,
                     tools=tools,
                     response_format={"type": "text"},

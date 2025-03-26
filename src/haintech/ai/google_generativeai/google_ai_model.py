@@ -42,6 +42,7 @@ class GoogleAIModel(BaseAIModel):
     def get_chat_response(
         self,
         message: str | AIModelInteractionMessage = None,
+        prompt: AIPrompt = None,
         context: str | AIPrompt = None,
         history: Iterator[AIModelInteractionMessage] = None,
         functions: Dict[Callable, protos.FunctionDeclaration] = None,
@@ -55,7 +56,10 @@ class GoogleAIModel(BaseAIModel):
         elif isinstance(message, str):
             message = AIModelInteractionMessage(role="user", content=message)
         msg_list = (self._create_content_from_message(m) for m in history)
-        context = self._prompt_to_str(context) if context else None
+        if prompt:
+            context = self._prompt_to_str(prompt)
+        else:
+            context = self._prompt_to_str(context) if context else None
         if context:
             msg_ctx = AIModelInteractionMessage(role="system", content=context)
             msg_list = chain([self._create_content_from_message(msg_ctx)], msg_list)

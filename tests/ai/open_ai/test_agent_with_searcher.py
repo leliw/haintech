@@ -34,3 +34,6 @@ def test_agent_one_question():
     response = ai_agent.get_text_response(q)
     # Then: I should get answer rturned by searcher
     assert "Ferdynand" in response
+    # And: RAG item is in interaction
+    li =session.get_last_interaction()
+    assert "Ferdynand Kiepski" == li.prompt.documents[0].title

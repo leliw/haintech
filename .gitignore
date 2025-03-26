@@ -10,3 +10,4 @@ wheels/
 .venv
 
 .env
+tests/data/test_sessions/

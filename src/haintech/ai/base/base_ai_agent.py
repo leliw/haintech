@@ -31,6 +31,18 @@ class BaseAIAgent(BaseAIChat):
         searcher: BaseRAGSearcher = None,
         functions: List[Callable] = None,
     ):
+        """Base AI Agent.
+
+        Args:
+            name: name of the agent
+            description: description of the agent
+            ai_model: AI model
+            prompt: Context prompt for model
+            context: Context prompt for model
+            session: current session object
+            searcher: RAG searcher
+            functions: list of functions to add
+        """
         super().__init__(ai_model, prompt or context, session)
         self.name = name or self.__class__.__name__
         self.description = description
@@ -76,7 +88,7 @@ class BaseAIAgent(BaseAIChat):
         """
         response = self.ai_model.get_chat_response(
             message=message,
-            context=self._get_context(message),
+            prompt=self._get_context(message),
             history=self.iter_messages(),
             functions=self.functions,
             interaction_logger=self._interaction_logger,

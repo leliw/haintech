@@ -68,7 +68,7 @@ class BaseAIChat(ABC):
         """
         response = self.ai_model.get_chat_response(
             message=message,
-            context=self._get_context(message),
+            prompt=self._get_context(message),
             history=self.iter_messages(),
             interaction_logger=self._interaction_logger,
         )

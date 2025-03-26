@@ -107,6 +107,23 @@ class AIModelInteractionTool(BaseModel):
     function: Any
 
 
+class AIPrompt(BaseModel):
+    """Structured AI prompt model.
+
+    According to: <https://cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/prompt-design-strategies#components-of-a-prompt>
+    """
+
+    persona: Optional[str] = None
+    objective: Optional[str] = None
+    instructions: Optional[str] = None
+    constraints: Optional[str] = None
+    context: Optional[str] = None
+    documents: Optional[List[str | RAGItem]] = Field(default_factory=list)
+    output_format: Optional[str] = None
+    examples: Optional[List[str]] = Field(default_factory=list)
+    recap: Optional[str] = None
+
+
 class AIModelInteraction(BaseModel):
     """One interaction with AIModel"""
 
@@ -114,6 +131,7 @@ class AIModelInteraction(BaseModel):
     model: str
     message: AIModelInteractionMessage = None
     context: Optional[str] = None
+    prompt: Optional[AIPrompt] = None
     history: List[AIModelInteractionMessage]
     tools: Optional[List[AIModelInteractionTool]] = None
     parallel_tool_calls: Optional[bool] = None
@@ -125,7 +143,7 @@ class AIModelSession(ABC):
     """AIModel session model."""
 
     @abstractmethod
-    def add_interaction(self, interaction: AIModelInteraction):
+    def add_interaction(self, interaction: AIModelInteraction) -> None:
         """Add interaction to session."""
         pass
 
@@ -268,23 +286,6 @@ class AIAgentSession(AIModelSession):
                     yield interaction.message
                     # I've found the last iteration for the agent
                     return
-
-
-class AIPrompt(BaseModel):
-    """Structured AI prompt model.
-
-    According to: <https://cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/prompt-design-strategies#components-of-a-prompt>
-    """
-
-    persona: Optional[str] = None
-    objective: Optional[str] = None
-    instructions: Optional[str] = None
-    constraints: Optional[str] = None
-    context: Optional[str] = None
-    documents: Optional[List[str | RAGItem]] = Field(default_factory=list)
-    output_format: Optional[str] = None
-    examples: Optional[List[str]] = Field(default_factory=list)
-    recap: Optional[str] = None
 
 
 class AIFunctionParameter(BaseModel):
