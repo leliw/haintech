@@ -1,7 +1,8 @@
 from .base_processor import BaseProcessor, FieldNameOrLambda
-from .flat_map_processor import FlatMapProcessor
-
 from .filter_processor import FilterProcessor
+from .flat_map_processor import FlatMapProcessor
+from .group_processor import GroupProcessor
+
 # from .pdf_loader import PdfLoader
 from .json_writer import JsonWriter
 from .lambda_processor import LambdaProcessor
@@ -16,6 +17,7 @@ from .pipeline_processor import PipelineProcessor
 __all__ = [
     "BaseProcessor",
     "FieldNameOrLambda",
+    "GroupProcessor",
     "Pipeline",
     "LambdaProcessor",
     "FilterProcessor",
