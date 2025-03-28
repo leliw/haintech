@@ -20,7 +20,7 @@ class AITaskExecutor:
             prompt: Prompt (f-string).
         """
         self.ai_model = ai_model
-        self.ai_chat = BaseAIChat(ai_model=ai_model, context=system_instructions)
+        self.system_instructions = system_instructions
         self.prompt = prompt
 
     def execute(self, **kwargs) -> str:
@@ -32,7 +32,8 @@ class AITaskExecutor:
             str: AI Model response.
         """
         prompt = self.prompt.format(**kwargs)
-        return self.ai_chat.get_text_response(prompt).strip()
+        ai_chat = BaseAIChat(ai_model=self.ai_model, context=self.system_instructions)
+        return ai_chat.get_text_response(prompt).strip()
 
     @classmethod
     def create_from_definition(
