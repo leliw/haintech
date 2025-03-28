@@ -48,3 +48,4 @@ chat session history. There are only mabstract methods.
 * BaseAIModel
 * BaseAIChat
 * BaseAIAgent
+* [AITaskExecutor](ai/ai_task_executor.md) - wraps an AI model that it can be used like a function
