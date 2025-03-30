@@ -72,6 +72,8 @@ class BaseAIModel(ABC):
                     ret += f"\nDocument: {r.title}\n{r.content}\n"
                 else:
                     ret += f"\nDocument:\n{d}\n"
+        if prompt.output_format:
+            ret += f"Output format: {prompt.output_format}\n"
         if prompt.examples:
             ret += f"Examples: {prompt.examples}\n"
         if prompt.recap:

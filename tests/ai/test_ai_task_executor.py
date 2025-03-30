@@ -1,3 +1,4 @@
+import json
 import pytest
 
 from haintech.ai.ai_task_executor import AITaskExecutor
@@ -37,6 +38,33 @@ def test_return_str(ai_model):
     # Then: Return string
     assert isinstance(ret, str)
     assert "users" == ret
+
+def test_return_json(ai_model):
+    # Given: AITaskExecutor
+    te = AITaskExecutor(
+        ai_model=ai_model,
+        system_instructions=AIPrompt(
+            persona="You are experienced developer",
+            objective="Prepare the name for the feature",
+            instructions="Use snake_case.",
+            context="It will be used as a folder name contais code.",
+            constraints="Use english language and plural form.",
+            examples=[
+                "Q: Zarządzanie użytkownikami\nA: {`feature`: `users`}",
+                "Q: CRUD dla książek\nA: {`feature`: `books`}",
+                "Q: Obsługa projektów\nA: {`feature`: `projects`}",
+            ],
+            output_format="Return JSON."
+        ),
+        prompt="{prompt}",
+        response_format="json",
+    )
+    # When: Execute
+    ret = te.execute(prompt="Zarządzanie użytkownikami")
+    r = json.loads(ret)
+    # Then: Return string
+    assert isinstance(ret, str)
+    assert "users" == r["feature"]
 
 
 def test_create_from_definition(ai_model):

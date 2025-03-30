@@ -1,7 +1,7 @@
 import logging
 from abc import ABC
 from pathlib import Path
-from typing import Callable, Iterator, List, TypeAlias
+from typing import Callable, Iterator, List, Literal, TypeAlias
 
 from haintech.ai.base.base_ai_model import BaseAIModel
 from haintech.ai.model import (
@@ -57,7 +57,9 @@ class BaseAIChat(ABC):
                 self.add_response_message(self.session.get_last_response())
 
     def _get_response(
-        self, message: AIModelInteractionMessage = None
+        self,
+        message: AIModelInteractionMessage = None,
+        response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         """Get response from LLM
 
@@ -71,6 +73,7 @@ class BaseAIChat(ABC):
             prompt=self._get_context(message),
             history=self.iter_messages(),
             interaction_logger=self._interaction_logger,
+            response_format=response_format,
         )
         return response
 
@@ -137,3 +140,15 @@ class BaseAIChat(ABC):
 
     def get_text_response(self, message: str = None) -> str:
         return self.get_response(message).content
+
+    def get_json_response(self, message: str = None) -> str:
+        i_msg = (
+            AIModelInteractionMessage(role="user", content=message) if message else None
+        )
+        # Call LLM
+        m_resp = self._get_response(message=i_msg, response_format="json")
+        # Add message and response to history
+        if i_msg:
+            self.add_message(i_msg)
+        self.add_response_message(m_resp)
+        return m_resp.content

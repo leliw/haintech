@@ -1,3 +1,4 @@
+from typing import Literal
 from .base.base_ai_chat import BaseAIChat
 from .base.base_ai_model import BaseAIModel
 from .model import AIPrompt, AITask
@@ -10,7 +11,11 @@ class AITaskExecutor:
     """
 
     def __init__(
-        self, ai_model: BaseAIModel, system_instructions: AIPrompt, prompt: str
+        self,
+        ai_model: BaseAIModel,
+        system_instructions: AIPrompt,
+        prompt: str,
+        response_format: Literal["text", "json"] = "text",
     ):
         """Initialize AI task executor.
 
@@ -22,6 +27,7 @@ class AITaskExecutor:
         self.ai_model = ai_model
         self.system_instructions = system_instructions
         self.prompt = prompt
+        self.response_format = response_format
 
     def execute(self, **kwargs) -> str:
         """Execute task.
@@ -33,7 +39,10 @@ class AITaskExecutor:
         """
         prompt = self.prompt.format(**kwargs)
         ai_chat = BaseAIChat(ai_model=self.ai_model, context=self.system_instructions)
-        return ai_chat.get_text_response(prompt).strip()
+        if self.response_format == "json":
+            return ai_chat.get_json_response(prompt).strip()
+        else:
+            return ai_chat.get_text_response(prompt).strip()
 
     @classmethod
     def create_from_definition(
