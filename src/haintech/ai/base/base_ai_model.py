@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from inspect import Parameter, signature
 from types import UnionType
-from typing import Any, Callable, Dict, Iterator
+from typing import Any, Callable, Dict, Iterator, Literal
 
 from openai.types.shared_params import FunctionDefinition
 
@@ -26,6 +26,7 @@ class BaseAIModel(ABC):
         history: Iterator[AIModelInteractionMessage] = None,
         functions: Dict[Callable, Any] = None,
         interaction_logger: Callable[[AIModelInteraction], None] = None,
+        response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         """Return chat response from LLM
 

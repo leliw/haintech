@@ -1,6 +1,6 @@
 import logging
 from itertools import chain
-from typing import Callable, Dict, Iterator, override
+from typing import Callable, Dict, Iterator, Literal, override
 
 from google.generativeai import (
     GenerationConfig,
@@ -47,6 +47,7 @@ class GoogleAIModel(BaseAIModel):
         history: Iterator[AIModelInteractionMessage] = None,
         functions: Dict[Callable, protos.FunctionDeclaration] = None,
         interaction_logger: Callable[[AIModelInteraction], None] = None,
+        response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         history = history or []
         if not isinstance(history, list):
@@ -68,9 +69,15 @@ class GoogleAIModel(BaseAIModel):
             generation_config=self.parameters,
             # system_instruction=context,
         )
+        generation_config = GenerationConfig(
+            response_mime_type="text/plain"
+            if response_format == "text"
+            else "application/json"
+        )
         chat = model.start_chat(history=msg_list)
         native_response = chat.send_message(
             self._create_content_from_message(message),
+            generation_config=generation_config,
             tools=functions.values() if functions else None,
         )
         response = self._create_response_from_content_response(native_response)

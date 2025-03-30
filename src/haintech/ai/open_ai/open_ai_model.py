@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Callable, Dict, Iterator, override
+from typing import Callable, Dict, Iterator, Literal, override
 
 from openai import OpenAI
 from openai.types.chat import (
@@ -46,6 +46,7 @@ class OpenAIModel(BaseAIModel):
         history: Iterator[AIModelInteractionMessage] = None,
         functions: Dict[str, FunctionDefinition] = None,
         interaction_logger: Callable[[AIModelInteraction], None] = None,
+        response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         history = history or []
         if not isinstance(history, list):
@@ -79,12 +80,16 @@ class OpenAIModel(BaseAIModel):
                 )
         else:
             tools = None
+        if response_format == "json":
+            response_format = {"type": "json_object"}
+        else:
+            response_format = {"type": "text"}
         try:
             resp = self.openai.chat.completions.create(
                 model=self.model_name,
                 messages=msg_list,
                 tools=tools,
-                response_format={"type": "text"},
+                response_format=response_format,
                 **self.parameters.model_dump(),
             )
             response = self._create_ai_chat_response(resp.choices[0].message)
