@@ -11,6 +11,30 @@ class D(BaseModel):
 
 
 @pytest.mark.asyncio
+async def test_as_processor():
+    # Given: A pipeline with subpipeline with str as input
+    pl = Pipeline[D, List[str]](
+        [
+            LambdaProcessor[D, str](lambda d: d.subitems[0]),
+            PipelineProcessor[str, str](
+                [
+                    LambdaProcessor[str, str](lambda s: f"{s}{s}"),
+                ]
+            ),
+        ]
+    )
+    # When: Run the pipeline with object with list
+    ret = await pl.run_and_return(
+        D(
+            page_no=1,
+            subitems=["a", "b", "c"],
+        )
+    )
+    # Then: Returns str
+    assert ret == "aa"
+
+
+@pytest.mark.asyncio
 async def test_as_flatMap():
     # Given: A pipeline with subpipeline with list as input
     pl = Pipeline[D, List[str]](
@@ -79,7 +103,7 @@ async def test_as_flatMap_with_input_and_output():
             subitems=["a", "b", "c"],
         )
     )
-    # Then: Returns object 
+    # Then: Returns object
     assert isinstance(ret, D)
     # And: Attribute is changed
     assert ret.subitems == ["aa", "bb", "cc"]
