@@ -2,12 +2,13 @@ import pytest
 
 from haintech.ai.ai_task_executor import AITaskExecutor
 from haintech.ai.base.base_ai_model import BaseAIModel
+from haintech.ai.deep_seek import DeepSeekAIModel
+from haintech.ai.google_generativeai import GoogleAIModel
 from haintech.ai.model import AIFunctionParameter, AIPrompt, AITask
-from haintech.ai.google_generativeai.google_ai_model import GoogleAIModel
-from haintech.ai.open_ai.open_ai_model import OpenAIModel
+from haintech.ai.open_ai import OpenAIModel
 
 
-@pytest.fixture(params=[OpenAIModel, GoogleAIModel])
+@pytest.fixture(params=[OpenAIModel, GoogleAIModel, DeepSeekAIModel])
 def ai_model(request: pytest.FixtureRequest) -> BaseAIModel:
     ai_model = request.param(parameters={"temperature": 0})
     return ai_model
@@ -44,7 +45,9 @@ def test_create_from_definition(ai_model):
         name="get_feature_name",
         description="Get feature name",
         parameters=[
-            AIFunctionParameter(name="feature", description="Feature description", type="str")
+            AIFunctionParameter(
+                name="feature", description="Feature description", type="str"
+            )
         ],
         return_type="str",
         return_description="Feature name",
@@ -69,3 +72,6 @@ def test_create_from_definition(ai_model):
     # Then: Return string
     assert isinstance(ret, str)
     assert "users" == ret
+
+if __name__ == "__main__":
+    pytest.main(["-s", __file__])

@@ -1,3 +1,3 @@
-from .deepseek_ai_model import DeepSeekAIModel
+from .deep_seek_ai_model import DeepSeekAIModel
 
 __all__ = ["DeepSeekAIModel"]

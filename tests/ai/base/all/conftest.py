@@ -10,7 +10,7 @@ from haintech.ai import (
     BaseAIModel,
     BaseAITextEmbeddingModel,
 )
-from haintech.ai.deep_seek.deepseek_ai_model import DeepSeekAIModel
+from haintech.ai.deep_seek.deep_seek_ai_model import DeepSeekAIModel
 from haintech.ai.google_generativeai import GoogleAIModel, GoogleAITextEmbeddingModel
 from haintech.ai.open_ai import OpenAIModel, OpenAITextEmbeddingModel
 
