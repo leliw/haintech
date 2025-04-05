@@ -16,4 +16,5 @@ class LambdaProcessor[I, O](BaseProcessor):
         self.expression = expression
 
     async def process_item(self, data: I, *kwargs) -> O:
-        return self.expression(data, *kwargs)
+        ret = self.expression(data, *kwargs)
+        return ret if ret is not None else data
