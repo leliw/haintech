@@ -26,6 +26,9 @@ dev = [
     "ruff>=0.11.2",
 ]
 
+[tool.uv]
+extra-index-url = ["https://europe-west3-python.pkg.dev/development-428212/pip/simple"]
+
 [[tool.uv.index]]
 name = "private-registry"
 url = "https://europe-west3-python.pkg.dev/development-428212/pip"

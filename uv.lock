@@ -9,7 +9,7 @@ resolution-markers = [
 [[package]]
 name = "ampf"
 version = "0.1.18"
-source = { registry = "https://europe-west3-python.pkg.dev/development-428212/pip/simple/" }
+source = { registry = "https://europe-west3-python.pkg.dev/development-428212/pip/simple" }
 dependencies = [
     { name = "fastapi" },
     { name = "pydantic" },
@@ -308,7 +308,7 @@ wheels = [
 
 [[package]]
 name = "haintech"
-version = "0.1.0"
+version = "0.1.5"
 source = { editable = "." }
 dependencies = [
     { name = "ampf" },
