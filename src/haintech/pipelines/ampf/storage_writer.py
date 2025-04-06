@@ -1,11 +1,15 @@
-from typing import Callable, Union
+from typing import Callable, Union, override
+
+from ampf.base import BaseStorage
 from pydantic import BaseModel
 
-from ..base_processor import BaseProcessor, get_field_name_or_lambda
-from ampf.base import BaseStorage
+from haintech.pipelines.ampf.storage_reader import StorageReader
+
+from ..base_processor import get_field_name_or_lambda
+from ..checkpoint_processor import CheckpointProcessor
 
 
-class StorageWriter[M: BaseModel](BaseProcessor[M, M]):
+class StorageWriter[M: BaseModel](CheckpointProcessor[M]):
     def __init__(
         self,
         storage: BaseStorage,
@@ -25,3 +29,9 @@ class StorageWriter[M: BaseModel](BaseProcessor[M, M]):
             key = self.storage.get_key(data)
         self.storage.put(key, data)
         return data
+    
+    @override
+    def create_generator(self):
+        return StorageReader[str, M](self.storage)
+    
+        

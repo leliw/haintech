@@ -15,5 +15,5 @@ class StorageReader[str, M: BaseModel](BaseProcessor[str, M]):
         super().__init__(name, input, output)
         self.storage = storage
 
-    async def process_item(self, key_name: str) -> M:
-        return self.storage.get(key_name)
+    async def process_item(self, key: str) -> M:
+        return self.storage.get(key)

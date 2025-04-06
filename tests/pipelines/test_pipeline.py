@@ -1,8 +1,11 @@
 import asyncio
 import logging
+from typing import override
+
 import pytest
 
-from haintech.pipelines import BaseProcessor, Pipeline, LambdaProcessor
+from haintech.pipelines import BaseProcessor, LambdaProcessor, Pipeline
+from haintech.pipelines.checkpoint_processor import CheckpointProcessor
 
 
 @pytest.mark.asyncio
@@ -70,3 +73,34 @@ async def test_pipeline_run_and_return_list():
     pl.add_processor(Mul2Processor("Mul2"))
     ret = await pl.run_and_return(5)
     assert ret == [0, 2, 4, 6, 8]
+
+
+class FakeCheckpoint[T](CheckpointProcessor[T]):
+    @override
+    async def process_item(self, data, **kwargs):
+        return data
+
+    @override
+    def create_generator(self) -> BaseProcessor[T, T]:
+        return None
+
+
+@pytest.mark.asyncio
+async def test_get_step():
+    # Given: A pipeline with checkpoint
+    pl = Pipeline(
+        [
+            LambdaProcessor[int, int](lambda x: x + 1, name="L1"),
+            FakeCheckpoint[int](),
+            LambdaProcessor[int, int](lambda x: x + 2, name="L2"),
+        ]
+    )
+    # When: Steps are taken
+    pl0 = pl.get_step(0)
+    pl1 = pl.get_step(1)
+    # And : Run separately
+    ret0 = await pl0.run_and_return(1)
+    ret1 = await pl1.run_and_return(1)
+    # Then: Results are independent
+    assert ret0 == 2
+    assert ret1 == 3

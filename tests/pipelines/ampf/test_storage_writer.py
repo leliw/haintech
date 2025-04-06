@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from haintech.pipelines import Pipeline
 from haintech.pipelines.ampf import StorageWriter
+from haintech.pipelines.lambda_processor import LambdaProcessor
 
 
 class D(BaseModel):
@@ -76,6 +77,30 @@ async def test_pipe_without_key_name(factory, data):
     assert len(keys) == 1
     assert keys[0] == "test"
     assert storage.get(keys[0]) == data
+
+
+@pytest.mark.asyncio
+async def test_pipe_divided_into_steps(factory, data):
+    # Given: Storage with key_name
+    storage = factory.create_storage("test3", D, "content")
+    # And: Pipeline with StorageWriter
+    pl = Pipeline(
+        [
+            LambdaProcessor[D, D](lambda d: setattr(d, "page_no", 2)),
+            StorageWriter(storage),
+            LambdaProcessor[D, D](lambda d: setattr(d, "content", "2")),
+        ]
+    )
+    # And: Two steps are taken
+    pl0 = pl.get_step(0)
+    pl1 = pl.get_step(1)
+    # When: Run first step with data
+    await pl0.run_and_return(data)
+    # And: Run second step with sotrage keys
+    ret = await pl1.run_and_return(storage.keys())
+    # Then: Both steps were executed
+    assert ret[0].page_no == 2
+    assert ret[0].content == "2"
 
 
 if __name__ == "__main__":
