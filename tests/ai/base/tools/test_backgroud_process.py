@@ -39,12 +39,14 @@ def test_background_process_cwd():
     os.remove("temp_dir/test.txt")
     os.rmdir("temp_dir")
 
+
 def test_background_process_empty_cwd():
     process = BackgroundProcess(["echo", "Hello"], cwd="")
     process.start()
     time.sleep(0.5)  # Allow some time for the process to run
     process.stop()
     assert not process.is_running()
+
 
 def test_background_process_already_running():
     process = BackgroundProcess(["sleep", "1"])
@@ -70,7 +72,12 @@ def test_background_process_stderr():
     time.sleep(0.5)
     process.stop()
     _, stderr = process.get_output()
-    assert "No such file or directory" in stderr or "cannot access" in stderr
+    assert any(
+        [
+            c in stderr
+            for c in ["No such file or directory", "cannot access", "nie ma dostępu"]
+        ]
+    )
 
 
 # def test_background_process_keyboard_interrupt():  # More complex, might require signals
