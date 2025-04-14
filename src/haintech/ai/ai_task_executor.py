@@ -1,4 +1,5 @@
 from typing import Literal
+
 from .base.base_ai_chat import BaseAIChat
 from .base.base_ai_model import BaseAIModel
 from .model import AIPrompt, AITask
@@ -40,7 +41,7 @@ class AITaskExecutor:
         prompt = self.prompt.format(**kwargs)
         ai_chat = BaseAIChat(ai_model=self.ai_model, context=self.system_instructions)
         if self.response_format == "json":
-            return ai_chat.get_json_response(prompt).strip()
+            return ai_chat.get_json_response(prompt)
         else:
             return ai_chat.get_text_response(prompt).strip()
 

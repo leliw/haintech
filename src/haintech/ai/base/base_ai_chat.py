@@ -1,3 +1,4 @@
+import json
 import logging
 from abc import ABC
 from pathlib import Path
@@ -151,4 +152,4 @@ class BaseAIChat(ABC):
         if i_msg:
             self.add_message(i_msg)
         self.add_response_message(m_resp)
-        return m_resp.content
+        return json.loads(m_resp.content.strip())

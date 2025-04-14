@@ -1,4 +1,3 @@
-import json
 import pytest
 
 from haintech.ai.ai_task_executor import AITaskExecutor
@@ -39,6 +38,7 @@ def test_return_str(ai_model):
     assert isinstance(ret, str)
     assert "users" == ret
 
+
 def test_return_json(ai_model):
     # Given: AITaskExecutor
     te = AITaskExecutor(
@@ -54,17 +54,16 @@ def test_return_json(ai_model):
                 "Q: CRUD dla książek\nA: {`feature`: `books`}",
                 "Q: Obsługa projektów\nA: {`feature`: `projects`}",
             ],
-            output_format="Return JSON."
+            output_format="Return JSON.",
         ),
         prompt="{prompt}",
         response_format="json",
     )
     # When: Execute
     ret = te.execute(prompt="Zarządzanie użytkownikami")
-    r = json.loads(ret)
     # Then: Return string
-    assert isinstance(ret, str)
-    assert "users" == r["feature"]
+    assert isinstance(ret, dict)
+    assert "users" == ret["feature"]
 
 
 def test_create_from_definition(ai_model):
@@ -100,6 +99,7 @@ def test_create_from_definition(ai_model):
     # Then: Return string
     assert isinstance(ret, str)
     assert "users" == ret
+
 
 if __name__ == "__main__":
     pytest.main(["-s", __file__])
