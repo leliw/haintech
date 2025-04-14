@@ -55,15 +55,15 @@ class BaseAIModel(ABC):
             return prompt
         ret = ""
         if prompt.persona:
-            ret += f"Persona: {prompt.persona}\n"
+            ret += f"Persona: {prompt.persona}\n\n"
         if prompt.objective:
-            ret += f"Objective: {prompt.objective}\n"
+            ret += f"Objective: {prompt.objective}\n\n"
         if prompt.instructions:
-            ret += f"Instructions: {prompt.instructions}\n"
+            ret += f"Instructions: {prompt.instructions}\n\n"
         if prompt.constraints:
-            ret += f"Constraints: {prompt.constraints}\n"
+            ret += f"Constraints: {prompt.constraints}\n\n"
         if prompt.context:
-            ret += f"Context: {prompt.context}\n"
+            ret += f"Context: {prompt.context}\n\n"
         if prompt.documents:
             ret += "Documents:\n"
             for d in prompt.documents:
@@ -72,12 +72,16 @@ class BaseAIModel(ABC):
                     ret += f"\nDocument: {r.title}\n{r.content}\n"
                 else:
                     ret += f"\nDocument:\n{d}\n"
+            ret += "\n"
         if prompt.output_format:
-            ret += f"Output format: {prompt.output_format}\n"
+            ret += f"Output format: {prompt.output_format}\n\n"
         if prompt.examples:
             ret += f"Examples: {prompt.examples}\n"
+            for e in prompt.examples:
+                ret += f"{e}\n"
+            ret += "\n"
         if prompt.recap:
-            ret += f"Recap: {prompt.recap}\n"
+            ret += f"Recap: {prompt.recap}\n\n"
         return ret
 
     @classmethod
