@@ -12,6 +12,7 @@ from haintech.ai import (
 )
 from haintech.ai.deep_seek.deep_seek_ai_model import DeepSeekAIModel
 from haintech.ai.google_generativeai import GoogleAIModel, GoogleAITextEmbeddingModel
+from haintech.ai.hugging_face import HuggingFaceTextEmbeddingModel
 from haintech.ai.open_ai import OpenAIModel, OpenAITextEmbeddingModel
 
 
@@ -21,7 +22,12 @@ def ai_model(request: pytest.FixtureRequest) -> BaseAIModel:
 
 
 @pytest.fixture(
-    params=[OpenAITextEmbeddingModel, GoogleAITextEmbeddingModel], scope="session"
+    params=[
+        OpenAITextEmbeddingModel,
+        GoogleAITextEmbeddingModel,
+        HuggingFaceTextEmbeddingModel,
+    ],
+    scope="session",
 )
 def ai_embedding_model(request: pytest.FixtureRequest) -> BaseAITextEmbeddingModel:
     return request.param()
