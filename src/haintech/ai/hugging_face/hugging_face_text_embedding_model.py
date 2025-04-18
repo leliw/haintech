@@ -1,3 +1,4 @@
+import logging
 from typing import List, override
 
 
@@ -5,16 +6,20 @@ from ..base import BaseAITextEmbeddingModel
 
 
 class HuggingFaceTextEmbeddingModel(BaseAITextEmbeddingModel):
+
+    _log = logging.getLogger(__name__)
     def __init__(
         self,
         ai_model_name: str = "all-mpnet-base-v2",
-        dimensions: int = None,
     ):
         self.ai_model_name = ai_model_name
-        self.dimensions = dimensions
-        from sentence_transformers import SentenceTransformer
+        try:
+            from sentence_transformers import SentenceTransformer
+            self.model = SentenceTransformer(ai_model_name)
+        except ImportError:
+            self._log.error("The package `sentence_transformers` is not installed ")
+            self._log.error("Try: pip install haintech[huggingface]")
 
-        self.model = SentenceTransformer(ai_model_name)
 
     @override
     def get_embedding(self, text: str) -> List[float]:

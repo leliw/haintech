@@ -1,6 +1,6 @@
 [project]
 name = "haintech"
-version = "0.1.8"
+version = "0.1.9"
 description = "Add your description here"
 readme = "README.md"
 authors = [
@@ -39,3 +39,13 @@ extra-index-url = ["https://europe-west3-python.pkg.dev/development-428212/pip/s
 name = "private-registry"
 url = "https://europe-west3-python.pkg.dev/development-428212/pip"
 publish-url = "https://europe-west3-python.pkg.dev/development-428212/pip"
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cpu" },
+]
