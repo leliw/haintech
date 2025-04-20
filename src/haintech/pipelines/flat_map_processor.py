@@ -1,16 +1,16 @@
-from typing import AsyncGenerator, AsyncIterator, Callable, Iterator, override
+from typing import AsyncGenerator, AsyncIterator, Callable, Iterable, Iterator, override
 
 from .base_processor import BaseProcessor
 
 
-class FlatMapProcessor[I, O](BaseProcessor):
+class FlatMapProcessor[I, O](BaseProcessor[I, O]):
     """Processor that iterates over a iterable in the data and yields the items"""
 
-    def __init__(self, iterator: Callable[[I], O], **kwargs):
+    def __init__(self, iterator: Callable[[I], Iterable[O]], **kwargs):
         """Processor that iterates over a iterable in the data and yields the items.
 
         Args:
-            iterator: A lambda function that takes an item from the data and returns an iterable.
+            iterator: A lambda function that takes a pipeline item and returns an iterable.
         """
         super().__init__(**kwargs)
         self.iterator = iterator

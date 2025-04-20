@@ -67,7 +67,7 @@ async def test_pipe_without_key_name(factory, data):
     # And: Pipeline with BlobStorageWriter without key_name
     pl = Pipeline(
         [
-            StorageWriter(storage),
+            StorageWriter[D](storage),
         ]
     )
     # When: Run pipeline with data

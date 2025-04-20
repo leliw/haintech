@@ -2,6 +2,55 @@
 
 AMPF processors are wrappers of AMPF classes and methods.
 
+## StorageWriter
+
+Writes input data to storage and sends to output.
+
+```python
+storage = factory.create_storage("test", D)
+pl = Pipeline(
+    [
+        StorageWriter[D](storage),
+    ]
+)
+```
+
+## StorageReader
+
+Reads data from storage and sends to output.
+The input is a key value.
+
+```python
+storage = factory.create_storage("test", D)
+data = D(page_no=1, content="test")
+storage.save(data)
+pl = Pipeline(
+    [
+        StorageReader[str, D](storage),
+    ]
+)
+ret = await pl.run_and_return(1)
+assert ret == data
+```
+
+## StorageIterator
+
+Reads all data from storage and sends to output.
+The input is ignored.
+
+```python
+storage = factory.create_storage("test", D)
+storage.save(data1)
+storage.save(data2)
+pl = Pipeline(
+    [
+        StorageIterator(storage),
+    ]
+)
+ret = await pl.run_and_return(None)
+assert ret == [data1, data2]
+```
+
 ## BlobStorageReader
 
 Downloads blob from storage. Gets key walue add returns blob (bytes or str) and metadata.

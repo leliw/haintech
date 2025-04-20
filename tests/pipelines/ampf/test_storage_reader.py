@@ -1,5 +1,4 @@
 import pytest
-from ampf.in_memory import InMemoryFactory
 from pydantic import BaseModel
 
 from haintech.pipelines import Pipeline
@@ -14,11 +13,6 @@ class D(BaseModel):
 @pytest.fixture
 def data():
     return D(page_no=1, content="test")
-
-
-@pytest.fixture
-def factory():
-    return InMemoryFactory()
 
 
 @pytest.mark.asyncio

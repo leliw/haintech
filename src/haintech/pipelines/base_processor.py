@@ -1,13 +1,12 @@
 from __future__ import annotations
+
 from abc import ABC
 from typing import Any, AsyncGenerator, AsyncIterator, Callable, Iterator, List, Union
 
 from pydantic import BaseModel
 
-
 FieldNameOrLambda = Union[str, Callable[[], Any]]
 ListOrIterator = Union[List, Iterator]
-
 
 
 def get_field_name_or_lambda(
@@ -48,17 +47,24 @@ class BaseProcessor[I, O](ABC):
         raise NotImplementedError
 
     def set_source(self, source: BaseProcessor | AsyncGenerator[I, None]):
-        """Set the source of the processor."""
+        """Set the source of the processor.
+        It is called by Pipeline._build() method.
+        """
         if isinstance(source, BaseProcessor):
             self.source = source.process
         else:
             self.source = source
 
+    def _get_iterator(self, data: I | Iterator[I]) -> Iterator[I]:
+        """Returns iterator for processing data.
+        It can be overriden to output more or less data than input."""
+        return self.source(data) if self.source else self.generate(data)
+
     async def process(self, data) -> AsyncIterator[O]:
         """Run the processor on the data. If previous processor is set,
         process the data from it.
         """
-        iterator = self.source(data) if self.source else self.generate(data)
+        iterator = self._get_iterator(data)
         if isinstance(iterator, Iterator):
             for item in iterator:
                 yield await self.wrap_process_item(item)
