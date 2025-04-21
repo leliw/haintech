@@ -1,4 +1,5 @@
-from typing import override
+from typing import Callable, List, override
+
 from .base_processor import BaseProcessor, FieldNameOrLambda
 from .pipeline import Pipeline
 
@@ -8,8 +9,8 @@ class PipelineProcessor[I, O](BaseProcessor[I, O]):
 
     def __init__(
         self,
-        processors: list[BaseProcessor] = None,
-        pipeline: Pipeline[I, O] = None,
+        processors: List[BaseProcessor] = None,
+        pipeline: Pipeline[I, O] | Callable[[I], Pipeline[I, O]] = None,
         name: str = None,
         input: FieldNameOrLambda = None,
         output: FieldNameOrLambda = None,
@@ -19,4 +20,8 @@ class PipelineProcessor[I, O](BaseProcessor[I, O]):
 
     @override
     async def process_item(self, data: I) -> O:
-        return await self.pipeline.run_and_return(data)
+        if isinstance(self.pipeline, Callable):
+            pipeline = self.pipeline(data)
+        else:
+            pipeline = self.pipeline
+        return await pipeline.run_and_return(data)
