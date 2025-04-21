@@ -9,8 +9,7 @@ from .lambda_processor import LambdaProcessor
 from .log_processor import LogProcessor
 from .pipeline import Pipeline
 from .pipeline_processor import PipelineProcessor
-
-# from .json_loader import JsonLoader
+from .progress_tracker import ProgressTracker
 
 # from .ai_text_generator import AiTextGenerator
 
@@ -28,4 +27,5 @@ __all__ = [
     "AiTextGenerator",
     "PipelineProcessor",
     "LogProcessor",
+    "ProgressTracker",
 ]
