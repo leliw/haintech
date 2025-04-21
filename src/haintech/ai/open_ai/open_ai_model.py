@@ -2,7 +2,7 @@ import json
 import logging
 from typing import Callable, Dict, Iterator, Literal, override
 
-from openai import OpenAI
+from openai import AsyncOpenAI, OpenAI
 from openai.types.chat import (
     ChatCompletionMessage,
     ChatCompletionMessageParam,
@@ -32,6 +32,7 @@ class OpenAIModel(BaseAIModel):
         parameters: OpenAIParameters | Dict[str, str | int | float] = None,
     ):
         self.openai = OpenAI()
+        self.async_openai = AsyncOpenAI()
         self.model_name = model_name
         if parameters and isinstance(parameters, dict):
             parameters = OpenAIParameters(**parameters)
@@ -48,9 +49,60 @@ class OpenAIModel(BaseAIModel):
         interaction_logger: Callable[[AIModelInteraction], None] = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
-        history = history or []
         if not isinstance(history, list):
-            history = list(history)
+            history = list(history or [])
+        parameters, ai_model_interaction = self._prepare_parameters(
+            history, prompt, context, message, functions, response_format
+        )
+        try:
+            resp = self.openai.chat.completions.create(**parameters)
+            response = self._create_ai_chat_response(resp.choices[0].message)
+            return response
+        except Exception as e:
+            self._log.error("Error: %s", e)
+            response = AIChatResponse(content=str(e))
+        finally:
+            if interaction_logger:
+                ai_model_interaction.response = response
+                interaction_logger(ai_model_interaction)
+
+    @override
+    async def get_chat_response_async(
+        self,
+        message: str | AIModelInteractionMessage = None,
+        prompt: AIPrompt = None,
+        context: str | AIPrompt = None,
+        history: Iterator[AIModelInteractionMessage] = None,
+        functions: Dict[str, FunctionDefinition] = None,
+        interaction_logger: Callable[[AIModelInteraction], None] = None,
+        response_format: Literal["text", "json"] = "text",
+    ) -> AIChatResponse:
+        if not isinstance(history, list):
+            history = list(history or [])
+        parameters, ai_model_interaction = self._prepare_parameters(
+            history, prompt, context, message, functions, response_format
+        )
+        try:
+            resp = await self.async_openai.chat.completions.create(**parameters)
+            response = self._create_ai_chat_response(resp.choices[0].message)
+            return response
+        except Exception as e:
+            self._log.error("Error: %s", e)
+            response = AIChatResponse(content=str(e))
+        finally:
+            if interaction_logger:
+                ai_model_interaction.response = response
+                interaction_logger(ai_model_interaction)
+
+    def _prepare_parameters(
+        self,
+        history: Iterator[AIModelInteractionMessage] = None,
+        prompt: AIPrompt = None,
+        context: str | AIPrompt = None,
+        message: str | AIModelInteractionMessage = None,
+        functions: Dict[str, FunctionDefinition] = None,
+        response_format: Literal["text", "json"] = "text",
+    ):
         msg_list = [self._create_message(m) for m in history]
         if prompt:
             context = self._prompt_to_str(prompt)
@@ -84,32 +136,26 @@ class OpenAIModel(BaseAIModel):
             response_format = {"type": "json_object"}
         else:
             response_format = {"type": "text"}
-        try:
-            resp = self.openai.chat.completions.create(
-                model=self.model_name,
-                messages=msg_list,
-                tools=tools,
-                response_format=response_format,
+
+        ai_model_interaction = AIModelInteraction(
+            model=self.model_name,
+            message=message,
+            prompt=prompt,
+            context=context if not prompt else None,
+            history=history,
+            tools=tools,
+            response_format=response_format,
+        )
+        return (
+            {
+                "model": self.model_name,
+                "messages": msg_list,
+                "tools": tools,
+                "response_format": response_format,
                 **self.parameters.model_dump(),
-            )
-            response = self._create_ai_chat_response(resp.choices[0].message)
-        except Exception as e:
-            self._log.error("Error: %s", e)
-            response = AIChatResponse(content=str(e))
-        if interaction_logger:
-            interaction_logger(
-                AIModelInteraction(
-                    model=self.model_name,
-                    message=message,
-                    prompt=prompt,
-                    context=context if not prompt else None,
-                    history=history,
-                    tools=tools,
-                    response_format={"type": "text"},
-                    response=response,
-                )
-            )
-        return response
+            },
+            ai_model_interaction,
+        )
 
     @classmethod
     def _create_message(

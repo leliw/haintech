@@ -101,5 +101,30 @@ def test_create_from_definition(ai_model):
     assert "users" == ret
 
 
+@pytest.mark.asyncio
+async def test_async_return_str(ai_model):
+    # Given: AITaskExecutor
+    te = AITaskExecutor(
+        ai_model=ai_model,
+        system_instructions=AIPrompt(
+            persona="You are experienced developer",
+            objective="Prepare the name for the feature",
+            instructions="Use snake_case.",
+            context="It will be used as a folder name contais code.",
+            constraints="Use english language and plural form.",
+            examples=[
+                "Q: Zarządzanie użytkownikami\nA: users",
+                "Q: CRUD dla książek\nA: books",
+                "Q: Obsługa projektów\nA: projects",
+            ],
+        ),
+        prompt="{prompt}",
+    )
+    # When: Execute
+    ret = await te.execute_async(prompt="Zarządzanie użytkownikami")
+    # Then: Return string
+    assert isinstance(ret, str)
+    assert "users" == ret
+
 if __name__ == "__main__":
     pytest.main(["-s", __file__])

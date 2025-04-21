@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Dict
 
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 
 from haintech.ai.open_ai import OpenAIModel, OpenAIParameters
 
@@ -16,6 +16,10 @@ class DeepSeekAIModel(OpenAIModel):
         parameters: OpenAIParameters | Dict[str, str | int | float] = None,
     ):
         self.openai = OpenAI(
+            api_key=os.getenv("DEEP_SEEK_API_KEY"),
+            base_url="https://api.deepseek.com",
+        )
+        self.async_openai = AsyncOpenAI(
             api_key=os.getenv("DEEP_SEEK_API_KEY"),
             base_url="https://api.deepseek.com",
         )

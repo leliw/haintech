@@ -41,6 +41,26 @@ class BaseAIModel(ABC):
         """
         pass
 
+    async def get_chat_response_async(
+        self,
+        message: AIModelInteractionMessage = None,
+        prompt: AIPrompt = None,
+        context: str | AIPrompt = None,
+        history: Iterator[AIModelInteractionMessage] = None,
+        functions: Dict[Callable, Any] = None,
+        interaction_logger: Callable[[AIModelInteraction], None] = None,
+        response_format: Literal["text", "json"] = "text",
+    ) -> AIChatResponse:
+        return self.get_chat_response(
+            message,
+            prompt,
+            context,
+            history,
+            functions,
+            interaction_logger,
+            response_format,
+        )
+
     @classmethod
     def _prompt_to_str(cls, prompt: str | AIPrompt) -> str:
         """Creates a string representation of AIPrompt object.

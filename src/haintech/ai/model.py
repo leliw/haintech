@@ -136,7 +136,7 @@ class AIModelInteraction(BaseModel):
     tools: Optional[List[AIModelInteractionTool]] = None
     parallel_tool_calls: Optional[bool] = None
     response_format: Optional[Dict[str, str]] = None
-    response: AIChatResponse
+    response: Optional[AIChatResponse] = None
 
 
 class AIModelSession(ABC):
