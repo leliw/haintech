@@ -39,6 +39,8 @@ async def test_pipe_key_name(factory, data):
     assert len(keys) == 1
     assert keys[0] == 1
     assert storage.get(keys[0]) == data
+    # Clean up
+    storage.drop()
 
 
 @pytest.mark.asyncio

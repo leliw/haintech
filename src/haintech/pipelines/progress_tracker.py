@@ -10,14 +10,14 @@ class ProgressTracker:
 
     _log = logging.getLogger(__name__)
 
-    def __init__(self, parent: Optional["ProgressTracker"] = None):
+    def __init__(self, total_steps: int = 0, parent: Optional["ProgressTracker"] = None):
         """Initializes the ProgressTracker.
 
         Args:
             parent: An optional parent ProgressTracker. If provided,
                     this tracker will increment the parent when it completes.
         """
-        self.total_steps = 0  # Total steps required for completion
+        self.total_steps = total_steps  # Total steps required for completion
         self.completed_steps = 0  # Number of steps completed so far
         self._lock = threading.Lock()  # Lock for thread safety
         self.parent = parent  # Reference to the parent tracker, if any
