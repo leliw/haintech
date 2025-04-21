@@ -152,4 +152,10 @@ class BaseAIChat(ABC):
         if i_msg:
             self.add_message(i_msg)
         self.add_response_message(m_resp)
-        return json.loads(m_resp.content.strip())
+        try:
+            return json.loads(m_resp.content.strip())
+        except json.JSONDecodeError as e:
+            self._log.warning(e)
+            self._log.warning("JSON content: %s", m_resp.content)
+            raise e
+
