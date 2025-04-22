@@ -10,6 +10,7 @@ from .log_processor import LogProcessor
 from .pipeline import Pipeline
 from .pipeline_processor import PipelineProcessor
 from .progress_tracker import ProgressTracker
+from .concurrent_processor import ConcurrentProcessor
 
 # from .ai_text_generator import AiTextGenerator
 
@@ -28,4 +29,5 @@ __all__ = [
     "PipelineProcessor",
     "LogProcessor",
     "ProgressTracker",
+    "ConcurrentProcessor",
 ]
