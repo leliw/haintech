@@ -40,7 +40,7 @@ class BaseProcessor[I, O](ABC):
         self.output = output
         self.source = None
 
-    async def process_item(self, data: I, **kwargs) -> O:
+    async def process_item(self, data: I) -> O:
         """The main method that processes data.
         Override this method in subclasses.
         """
@@ -86,7 +86,7 @@ class BaseProcessor[I, O](ABC):
             return exp(data)
         return data.model_dump()[exp] if isinstance(data, BaseModel) else data[exp]
 
-    async def wrap_process_item(self, data, **kwargs):
+    async def wrap_process_item(self, data):
         """
         Run process method.
         If result_key_name is set, store result in input data and return it.
@@ -95,7 +95,7 @@ class BaseProcessor[I, O](ABC):
             input_data = self._get_input_data(data)
         else:
             input_data = data
-        ret = await self.process_item(input_data, **kwargs)
+        ret = await self.process_item(input_data)
         return self._put_output_data(data, ret)
 
     def _get_input_data(self, data) -> Any:
