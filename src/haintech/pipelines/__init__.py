@@ -12,6 +12,8 @@ from .pipeline_processor import PipelineProcessor
 from .progress_tracker import ProgressTracker
 from .concurrent_processor import ConcurrentProcessor
 
+from .jsonl_writer import JsonlWriter
+
 # from .ai_text_generator import AiTextGenerator
 
 __all__ = [
@@ -30,4 +32,5 @@ __all__ = [
     "LogProcessor",
     "ProgressTracker",
     "ConcurrentProcessor",
+    "JsonlWriter",
 ]

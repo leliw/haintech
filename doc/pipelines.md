@@ -19,6 +19,8 @@ A pipeline allows for sequential data processing through a series of processors.
   a processor that retrieves a blob from storage.  
 * [BlobStorageWriter](pipelines/ampf_processors.md) –
   a processor that saves a blob to storage.
+* [JsonlWriter](pipelines/jsonl_processors.md) –
+  a processor that saves a JSONL file.
 
 ## Helper Classes
 
