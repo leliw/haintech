@@ -51,6 +51,22 @@ ret = await pl.run_and_return(None)
 assert ret == [data1, data2]
 ```
 
+Constructor's parameter `storage` can be passed as `BaseStorage` object
+or as lambda expersion that returns `BaseStorage` object. In this case
+input value can be used to obtain collection.
+
+```python
+storage = factory.create_collection(
+    CollectionDef("cs", C, subcollections=[CollectionDef("ds", D)])
+)
+pl = Pipeline(
+    [
+        StorageIterator[str, D](lambda x: storage.get_collection(x, "ds")),
+    ]
+)
+ret = await pl.run_and_return(["X"])
+```
+
 ## BlobStorageReader
 
 Downloads blob from storage. Gets key walue add returns blob (bytes or str) and metadata.

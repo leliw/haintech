@@ -1,4 +1,4 @@
-from typing import Iterator, override
+from typing import AsyncIterator, Callable, Iterator, override
 
 from ampf.base import BaseStorage
 from pydantic import BaseModel
@@ -17,7 +17,7 @@ class StorageIterator[I, O: BaseModel](BaseProcessor[I, O]):
 
     def __init__(
         self,
-        storage: BaseStorage[O],
+        storage: BaseStorage[O] | Callable[[I], BaseStorage[O]],
         progress_tracker: ProgressTracker = None,
         name=None,
         input=None,
@@ -27,13 +27,25 @@ class StorageIterator[I, O: BaseModel](BaseProcessor[I, O]):
         self.storage = storage
         self.progress_tracker = progress_tracker
 
-    @override
-    def _get_iterator(self, _: I | Iterator[I]) -> Iterator[O]:
-        """Returns iterator for processing data."""
+    def process_flat_map(self, data: I) -> Iterator[O]:
+        if isinstance(self.storage, Callable):
+            storage = self.storage(data)
+        else:
+            storage = self.storage
         if self.progress_tracker:
             self.progress_tracker.set_total_steps(self.storage.count())
-        return self.storage.get_all()
+        for item in storage.get_all():
+            yield self._put_output_data(data, item)
 
     @override
-    async def process_item(self, data: I) -> O:
-        return data
+    async def process(self, data) -> AsyncIterator[O]:
+        """Add extra iteration based on the iterable expression"""
+        iterator = self._get_iterator(data)
+        if isinstance(iterator, Iterator):
+            for data in iterator:
+                for item in self.process_flat_map(data):
+                    yield item
+        else:
+            async for data in iterator:
+                for item in self.process_flat_map(data):
+                    yield item

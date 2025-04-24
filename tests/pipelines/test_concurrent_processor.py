@@ -16,7 +16,7 @@ async def test_set_source_and_run(log):
         @override
         async def process_item(self, data: int) -> int:
             self._log.info(f"Processing {data}")
-            await asyncio.sleep(5 - data)
+            await asyncio.sleep((5 - data)/10)
             self._log.info(f"Processed {data}")
             return data
     # When: All data can be processed concurrently
