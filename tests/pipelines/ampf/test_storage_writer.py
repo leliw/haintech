@@ -1,10 +1,13 @@
 import pytest
+from ampf.base import CollectionDef
 from ampf.in_memory import InMemoryFactory
+from ampf.local import LocalFactory
 from pydantic import BaseModel
 
 from haintech.pipelines import Pipeline
 from haintech.pipelines.ampf import StorageWriter
 from haintech.pipelines.lambda_processor import LambdaProcessor
+from haintech.pipelines.log_processor import LogProcessor
 
 
 class D(BaseModel):
@@ -103,6 +106,52 @@ async def test_pipe_divided_into_steps(factory, data):
     # Then: Both steps were executed
     assert ret[0].page_no == 2
     assert ret[0].content == "2"
+
+
+@pytest.fixture
+def factory_l(tmp_path):
+    return LocalFactory(tmp_path)
+
+
+@pytest.mark.asyncio
+async def test_lambda_storage(factory_l, data):
+    # Given: Two classes parent - child
+    class C(BaseModel):
+        name: str
+
+    class D(BaseModel):
+        name: str
+        _c: C = None
+
+        def set_c(self, c: C) -> C:
+            self._c = c
+            return self
+
+    # And: Storage collection for the classes
+    storage = factory_l.create_collection(
+        CollectionDef("cs", C, "name", subcollections=[CollectionDef("ds", D)])
+    )
+    # And: Pipeline with two writers, first "normal" and second - lambda expression
+    pl = Pipeline(
+        [
+            LambdaProcessor[str, C](lambda x: C(name=x)),
+            StorageWriter[C](storage),
+            LambdaProcessor[C, D](lambda c: D(name=c.name).set_c(c)),
+            LogProcessor(message="{name}"),
+            StorageWriter[D](lambda d: storage.get_collection(d._c.name, "ds")),
+        ]
+    )
+    # When: Run pipeline
+    ret = await pl.run_and_return("xxx")
+    # Then: Returns D object (with _c property)
+    assert isinstance(ret, D)
+    ret._c = None
+    assert ret == D(name="xxx")
+    # And: Data is stored
+    storage_d = storage.get_collection("xxx", "ds")
+    keys = list(storage_d.keys())
+    assert len(keys) == 1
+    assert storage_d.get(keys[0]) == D(name="xxx")
 
 
 if __name__ == "__main__":

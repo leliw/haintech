@@ -12,7 +12,7 @@ from .storage_reader import StorageReader
 class StorageWriter[M: BaseModel](CheckpointProcessor[M]):
     def __init__(
         self,
-        storage: BaseStorage,
+        storage: BaseStorage[M] | Callable[[M], BaseStorage[M]],
         key_name: Union[str, Callable[[M], str]] = None,
         progress_tracker: ProgressTracker = None,
         name=None,
@@ -25,11 +25,15 @@ class StorageWriter[M: BaseModel](CheckpointProcessor[M]):
         self.progress_tracker = progress_tracker
 
     async def process_item(self, data: M) -> M:
+        if isinstance(self.storage, Callable):
+            storage = self.storage(data)
+        else:
+            storage = self.storage
         if self.key_name:
             key = get_field_name_or_lambda(self.key_name, data)
         else:
-            key = self.storage.get_key(data)
-        self.storage.put(key, data)
+            key = storage.get_key(data)
+        storage.put(key, data)
         if self.progress_tracker:
             self.progress_tracker.increment()
         return data

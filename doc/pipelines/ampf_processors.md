@@ -15,6 +15,25 @@ pl = Pipeline(
 )
 ```
 
+Constructor's parameter `storage` can be passed as `BaseStorage` object
+or as lambda expersion that returns `BaseStorage` object. In this case
+input value can be used to obtain collection.
+
+```python
+storage = factory.create_collection(
+    CollectionDef("cs", C, "name", subcollections=[CollectionDef("ds", D)])
+)
+pl = Pipeline(
+    [
+        LambdaProcessor[str, C](lambda x: C(name=x)),
+        StorageWriter[C](storage),
+        LambdaProcessor[C, D](lambda c: D(name=c.name).set_c(c)),
+        LogProcessor(message="{name}"),
+        StorageWriter[D](lambda d: storage.get_collection(d._c.name, "ds")),
+    ]
+)
+```
+
 ## StorageReader
 
 Reads data from storage and sends to output.
