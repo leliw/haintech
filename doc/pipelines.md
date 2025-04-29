@@ -4,7 +4,8 @@ A collection of classes that enable the construction of pipelines.
 A pipeline allows for sequential data processing through a series of processors.  
 
 * [Pipeline](pipelines/pipeline.md) – The main class representing a pipeline.  
-* [BaseProcessor](pipelines/base_processor.md) – The base class for all processors.  
+* [BaseProcessor](pipelines/base_processor.md) – The base class for all processors.
+* [BaseFlatMapProcessor](pipelines/base_flat_map_processor.md) - The base class for all processors that flatten a list of lists. 
 * [ConcurrentProcessor](pipelines/concurrent_processor.md) – A processor that processes data concurrently.  
 
 ## Processor Classes  

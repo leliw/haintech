@@ -1,4 +1,5 @@
 from .base_processor import BaseProcessor, FieldNameOrLambda
+from .base_flat_map_processor import BaseFlatMapProcessor
 from .concurrent_processor import ConcurrentProcessor
 from .filter_processor import FilterProcessor
 from .flat_map_processor import FlatMapProcessor
@@ -19,6 +20,7 @@ from .progress_tracker import ProgressTracker
 __all__ = [
     "BaseProcessor",
     "FieldNameOrLambda",
+    "BaseFlatMapProcessor",
     "GroupProcessor",
     "Pipeline",
     "LambdaProcessor",

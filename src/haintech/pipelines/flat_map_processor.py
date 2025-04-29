@@ -1,43 +1,32 @@
-from typing import AsyncIterator, Callable, Iterable, Iterator, override
+from typing import Callable, Iterable, Iterator, override
 
-from .base_processor import BaseProcessor, FieldNameOrLambda
+from .base_flat_map_processor import BaseFlatMapProcessor
+from .base_processor import FieldNameOrLambda
 
 
-class FlatMapProcessor[I, O](BaseProcessor[I, O]):
+class FlatMapProcessor[I, O](BaseFlatMapProcessor[I, O]):
     """Processor that iterates over a iterable in the data and yields the items"""
 
     def __init__(
         self,
-        iterable: Callable[[I], Iterable[O]] = None,
+        extract_items: Callable[[I], Iterable[O]] = None,
         name: str = None,
         output: FieldNameOrLambda = None,
     ):
         """Processor that iterates over a iterable in the data and yields the items.
 
         Args:
-            iterable: A lambda function that takes a pipeline item and returns an iterable.
+            extract_items: A lambda function that takes a pipeline item and returns an iterable.
         """
         super().__init__(name=name, output=output)
-        self.iterable = iterable
-
-    def process_flat_map(self, data: I) -> Iterator[O]:
-        """Extra iteration based on the expression"""
-        if not self.iterable:
-            iterator = data
-        else:
-            iterator = self.iterable(data)
-        for item in iterator:
-            yield self._put_output_data(data, item)
+        self.extract_items = extract_items
 
     @override
-    async def process(self, data) -> AsyncIterator[O]:
-        """Add extra iteration based on the iterable expression"""
-        iterator = self._get_iterator(data)
-        if isinstance(iterator, Iterator):
-            for data in iterator:
-                for item in self.process_flat_map(data):
-                    yield item
+    def process_flat_map(self, data: I) -> Iterator[O]:
+        """Extra iteration based on the expression"""
+        if not self.extract_items:
+            iterator = data
         else:
-            async for data in iterator:
-                for item in self.process_flat_map(data):
-                    yield item
+            iterator = self.extract_items(data)
+        for item in iterator:
+            yield self._put_output_data(data, item)
