@@ -9,10 +9,9 @@ class LogProcessor[I](BaseProcessor[I,I]):
 
     def __init__(
         self,
-        name: str = None,
-        level: int = logging.INFO,
         message: str = "{item}",
-        **kwargs,
+        level: int = logging.INFO,
+        name: str = None,
     ):
         """Log the flowing data using the logging module.
 
@@ -25,7 +24,7 @@ class LogProcessor[I](BaseProcessor[I,I]):
         If the data is a dictionary or Pydantic class, the arguments 
         are the keys of the dictionary. Otherwise, the argument is 'item'.
         """
-        super().__init__(name=name, **kwargs)
+        super().__init__(name=name)
         self.level = level
         self.message = message
         self._log = logging.getLogger(name or __name__)
