@@ -11,7 +11,7 @@ def test_agent_with_ai_task(ai_model: BaseAIModel, session):
     # Given: AI Agent with AI Task
     ai_agent = BaseAIAgent(
         ai_model=ai_model,
-        context="You are a helpful python developer. Use available tools.",
+        context="Always use available tools. Don't invent yourself.",
         session=session,
     )
     td = AITask(
@@ -29,7 +29,7 @@ def test_agent_with_ai_task(ai_model: BaseAIModel, session):
             objective="Prepare the name for the feature",
             instructions="Use snake_case.",
             context="It will be used as a folder name contais code.",
-            constraints="Use english language and plural form.",
+            constraints="Use english language and plural form. Return only the name.",
             examples=[
                 "Q: Zarządzanie użytkownikami\nA: users",
                 "Q: User Management\nA: users",

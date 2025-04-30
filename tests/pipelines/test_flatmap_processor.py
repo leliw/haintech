@@ -33,11 +33,11 @@ async def test_pydantic_and_iterable_parameter():
 
 
 @pytest.mark.asyncio
-async def test_pydantic_and_iterable_and_output_parameters():
+async def test_pydantic_and_extract_items_and_output_parameters():
     pl = Pipeline[D, str](
         [
             FlatMapProcessor[D, str](
-                iterable=lambda d: d.subitems,
+                extract_items=lambda d: d.subitems,
                 output=lambda d, r: r + "x",
             ),
         ]

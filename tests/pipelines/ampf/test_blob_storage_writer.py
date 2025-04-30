@@ -33,7 +33,7 @@ async def test_pipe_file_name_key(factory, metadata):
         ]
     )
     # When: Run pipeline with blob and metadata
-    await pl.run_and_return(("test", metadata))
+    await pl.run_and_return([("test", metadata)])
     # Then: Blob and metadata are uploaded
     keys = list(storage.keys())
     assert len(keys) == 1
