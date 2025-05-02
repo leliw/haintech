@@ -1,6 +1,7 @@
 from typing import List
-from pydantic import BaseModel
+
 import pytest
+from pydantic import BaseModel
 
 from haintech.pipelines.flat_map_processor import FlatMapProcessor
 from haintech.pipelines.lambda_processor import LambdaProcessor
@@ -16,6 +17,7 @@ async def test_flat_list_by_default():
     # Then: The list is flattened
     assert ret == [1, 2, 3, 4]
 
+
 class D(BaseModel):
     page_no: int
     subitems: List[str]
@@ -29,6 +31,34 @@ async def test_pydantic_and_iterable_parameter():
         ]
     )
     ret = await pl.run_and_return(D(page_no=1, subitems=["a", "b"]))
+    assert ret == ["a", "b"]
+
+
+@pytest.mark.asyncio
+async def test_input_lambda_parameter():
+    # Given: FlatMapProcessor with input as lambda
+    pl = Pipeline[D, str](
+        [
+            FlatMapProcessor[D, str](input=lambda d: d.subitems),
+        ]
+    )
+    # When: Run
+    ret = await pl.run_and_return(D(page_no=1, subitems=["a", "b"]))
+    # Then: Return subitems
+    assert ret == ["a", "b"]
+
+
+@pytest.mark.asyncio
+async def test_input_field_name_parameter():
+    # Given: FlatMapProcessor with input as lambda
+    pl = Pipeline[D, str](
+        [
+            FlatMapProcessor[D, str](input="subitems"),
+        ]
+    )
+    # When: Run
+    ret = await pl.run_and_return(D(page_no=1, subitems=["a", "b"]))
+    # Then: Return subitems
     assert ret == ["a", "b"]
 
 

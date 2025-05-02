@@ -11,6 +11,7 @@ class FlatMapProcessor[I, O](BaseFlatMapProcessor[I, O]):
         self,
         extract_items: Callable[[I], Iterable[O]] = None,
         name: str = None,
+        input: FieldNameOrLambda = None,
         output: FieldNameOrLambda = None,
     ):
         """Processor that iterates over a iterable in the data and yields the items.
@@ -18,7 +19,7 @@ class FlatMapProcessor[I, O](BaseFlatMapProcessor[I, O]):
         Args:
             extract_items: A lambda function that takes a pipeline item and returns an iterable.
         """
-        super().__init__(name=name, output=output)
+        super().__init__(name=name, input=input, output=output)
         self.extract_items = extract_items
 
     @override

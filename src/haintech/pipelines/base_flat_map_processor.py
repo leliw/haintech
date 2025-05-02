@@ -9,20 +9,29 @@ class BaseFlatMapProcessor[I: Path, O: Path](BaseProcessor[I, O], ABC):
     def __init__(
         self,
         name: str = None,
+        input: FieldNameOrLambda = None,
         output: FieldNameOrLambda = None,
     ):
-        super().__init__(name=name, output=output)
+        super().__init__(name=name, input=input, output=output)
 
     @override
     async def process(self, data: I) -> AsyncIterator[O]:
         iterator = self._get_iterator(data)
         if isinstance(iterator, Iterator):
             for data in iterator:
-                for item in self.process_flat_map(data):
+                if self.input:
+                    input_data = self._get_input_data(data)
+                else:
+                    input_data = data
+                for item in self.process_flat_map(input_data):
                     yield item
         else:
             async for data in iterator:
-                for item in self.process_flat_map(data):
+                if self.input:
+                    input_data = self._get_input_data(data)
+                else:
+                    input_data = data                
+                for item in self.process_flat_map(input_data):
                     yield item
 
     @abstractmethod

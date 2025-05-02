@@ -8,6 +8,7 @@ It is similar to the `flatMap` operation in functional programming.
 Arguments:
 
 * iterable: Callable[[I], Iterable[O]] = None
+* input: FieldNameOrLambda = None,
 * output: FieldNameOrLambda = None,
 
 ## Usage
@@ -43,6 +44,21 @@ pl = Pipeline[D, str](
     [
         FlatMapProcessor[D, str](
             iterable=lambda d: d.subitems,
+            output=lambda d, r: r + "x",
+        ),
+    ]
+)
+ret = await pl.run_and_return(D(page_no=1, subitems=["a", "b"]))
+assert ret == ["ax", "bx"]
+```
+
+Using input and output parameters.
+
+```python
+pl = Pipeline[D, str](
+    [
+        FlatMapProcessor[D, str](
+            input="subitems",
             output=lambda d, r: r + "x",
         ),
     ]
