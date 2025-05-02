@@ -31,3 +31,9 @@ A pipeline allows for sequential data processing through a series of processors.
   tracks the progress of a pipeline.
 * [Limit](pipelines/limit.md) –
   a processor that limits the number of items processed.
+
+## AI processors
+
+* [TextEmbedder](pipelines/ai_processors.md#textembedder) -
+  returns embeddings for given text
+  
