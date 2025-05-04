@@ -30,4 +30,4 @@ class FlatMapProcessor[I, O](BaseFlatMapProcessor[I, O]):
         else:
             iterator = self.extract_items(data)
         for item in iterator:
-            yield self._put_output_data(data, item)
+            yield item
