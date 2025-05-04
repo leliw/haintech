@@ -1,3 +1,4 @@
+from typing import List
 import pytest
 
 from haintech.ai.hugging_face.hugging_face_text_embedding_model import (
@@ -20,4 +21,4 @@ async def test_set_source_and_run(log):
     )
     # Then: Embeddings are returned
     assert len(ret) == 2
-    assert all([len(i) > 0 for i in ret])
+    assert all([isinstance(i, List)  for i in ret])

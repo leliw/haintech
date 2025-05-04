@@ -23,4 +23,4 @@ class HuggingFaceTextEmbeddingModel(BaseAITextEmbeddingModel):
 
     @override
     def get_embedding(self, text: str) -> List[float]:
-        return self.model.encode(text)
+        return self.model.encode(text).tolist()
