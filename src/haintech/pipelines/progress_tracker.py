@@ -10,7 +10,7 @@ class ProgressTracker:
 
     _log = logging.getLogger(__name__)
 
-    def __init__(self, total_steps: int = 0, parent: Optional["ProgressTracker"] = None):
+    def __init__(self, total_steps: int = 0, parent: Optional["ProgressTracker"] = None, name: str = None):
         """Initializes the ProgressTracker.
 
         Args:
@@ -21,6 +21,7 @@ class ProgressTracker:
         self.completed_steps = 0  # Number of steps completed so far
         self._lock = threading.Lock()  # Lock for thread safety
         self.parent = parent  # Reference to the parent tracker, if any
+        self.name = name
 
     def set_total_steps(self, total_steps: int):
         """Sets the total number of steps required for this tracker.
@@ -36,9 +37,16 @@ class ProgressTracker:
         with self._lock:
             if self.completed_steps > 0:
                 raise ValueError(
-                    "Cannot set total steps after steps have been completed."
+                    f"{self.name} Cannot set total steps after steps have been completed."
                 )
+            self.completed_steps = 0
             self.total_steps = total_steps
+
+    def reset(self, total_steps: int = None):
+        with self._lock:
+            self.completed_steps = 0
+            if total_steps:
+                self.total_steps = total_steps
 
     def increment(self):
         """Increases the number of completed steps by one.
@@ -46,13 +54,13 @@ class ProgressTracker:
         and has a parent tracker, it increments the parent tracker.
         """
         if self.total_steps == 0:
-            raise ValueError("Total steps must be set before incrementing.")
+            raise ValueError(f"{self.name} Total steps must be set before incrementing.")
 
         is_complete = False
         with self._lock:
             self.completed_steps += 1
             if self.completed_steps > self.total_steps:
-                raise ValueError("Completed steps cannot exceed total steps.")
+                raise ValueError(f"{self.name} Completed steps cannot exceed total steps.")
             if self.completed_steps == self.total_steps:
                 is_complete = True
             current_completed = self.completed_steps
@@ -97,13 +105,14 @@ class ProgressTracker:
 
     def notify(self, completed: int, total: int):
         """Logs the current progress."""
+        name = f" {self.name}" if self.name else ""
         if total > 0:
-            self._log.info("Progress: %d/%d (%.1f%%)", completed, total, self.get_progress() * 100)
+            self._log.info("Progress%s: %d/%d (%.1f%%)", name, completed, total, self.get_progress() * 100)
         else:
-             self._log.info("Progress: %d/???", completed)
+             self._log.info("Progress%s: %d/???", name, completed)
 
 
     def __repr__(self) -> str:
         """Provides a string representation of the tracker's state."""
         with self._lock:
-            return f"<ProgressTracker({self.completed_steps}/{self.total_steps})>"
+            return f"<ProgressTracker({self.name}: {self.completed_steps}/{self.total_steps})>"
