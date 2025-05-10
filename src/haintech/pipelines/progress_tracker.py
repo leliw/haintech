@@ -10,7 +10,12 @@ class ProgressTracker:
 
     _log = logging.getLogger(__name__)
 
-    def __init__(self, total_steps: int = 0, parent: Optional["ProgressTracker"] = None, name: str = None):
+    def __init__(
+        self,
+        total_steps: int = 0,
+        parent: Optional["ProgressTracker"] = None,
+        name: str = None,
+    ):
         """Initializes the ProgressTracker.
 
         Args:
@@ -47,6 +52,9 @@ class ProgressTracker:
             self.completed_steps = 0
             if total_steps:
                 self.total_steps = total_steps
+                self._log.info("Progress tracker reset.")
+        # Optionally notify about the reset state
+        self.notify(0, self.total_steps)
 
     def increment(self):
         """Increases the number of completed steps by one.
@@ -54,13 +62,17 @@ class ProgressTracker:
         and has a parent tracker, it increments the parent tracker.
         """
         if self.total_steps == 0:
-            raise ValueError(f"{self.name} Total steps must be set before incrementing.")
+            raise ValueError(
+                f"{self.name} Total steps must be set before incrementing."
+            )
 
         is_complete = False
         with self._lock:
             self.completed_steps += 1
             if self.completed_steps > self.total_steps:
-                raise ValueError(f"{self.name} Completed steps cannot exceed total steps.")
+                raise ValueError(
+                    f"{self.name} Completed steps cannot exceed total steps."
+                )
             if self.completed_steps == self.total_steps:
                 is_complete = True
             current_completed = self.completed_steps
@@ -72,17 +84,6 @@ class ProgressTracker:
         if is_complete and self.parent:
             self._log.debug(f"Tracker complete. Incrementing parent: {self.parent}")
             self.parent.increment()
-
-    def reset(self):
-        """Resets the completed steps count to zero.
-        Does not change the total steps or the parent tracker.
-        """
-        with self._lock:
-            self.completed_steps = 0
-        self._log.info("Progress tracker reset.")
-        # Optionally notify about the reset state
-        self.notify(0, self.total_steps)
-
 
     def get_progress(self) -> float:
         """Returns the current progress as a float value between 0.0 and 1.0.
@@ -107,10 +108,15 @@ class ProgressTracker:
         """Logs the current progress."""
         name = f" {self.name}" if self.name else ""
         if total > 0:
-            self._log.info("Progress%s: %d/%d (%.1f%%)", name, completed, total, self.get_progress() * 100)
+            self._log.info(
+                "Progress%s: %d/%d (%.1f%%)",
+                name,
+                completed,
+                total,
+                self.get_progress() * 100,
+            )
         else:
-             self._log.info("Progress%s: %d/???", name, completed)
-
+            self._log.info("Progress%s: %d/???", name, completed)
 
     def __repr__(self) -> str:
         """Provides a string representation of the tracker's state."""
