@@ -33,7 +33,7 @@ class StorageIterator[I, O: BaseModel](BaseProcessor[I, O]):
         else:
             storage = self.storage
         if self.progress_tracker:
-            self.progress_tracker.set_total_steps(self.storage.count())
+            self.progress_tracker.set_total_steps(storage.count())
         for key in storage.keys():
             item = storage.get(key)
             yield self._put_output_data(data, item)
