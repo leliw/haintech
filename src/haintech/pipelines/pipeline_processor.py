@@ -2,10 +2,11 @@ from typing import Callable, List, override
 
 from .base_processor import BaseProcessor, FieldNameOrLambda
 from .pipeline import Pipeline
-
+import logging
 
 class PipelineProcessor[I, O](BaseProcessor[I, O]):
     """The processor that uses other pipeline to process items."""
+    _log = logging.getLogger(__name__)
 
     def __init__(
         self,
@@ -24,4 +25,9 @@ class PipelineProcessor[I, O](BaseProcessor[I, O]):
             pipeline = self.pipeline(data)
         else:
             pipeline = self.pipeline
-        return await pipeline.run_and_return(data)
+        try:
+            return await pipeline.run_and_return(data)
+        except IndexError as e:
+            self._log.warning("%s doesn't return anything.", self.name)
+            self._log.info(e)
+            return None

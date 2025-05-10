@@ -67,10 +67,14 @@ class BaseProcessor[I, O](ABC):
         iterator = self._get_iterator(data)
         if isinstance(iterator, Iterator):
             for item in iterator:
-                yield await self.wrap_process_item(item)
+                ret =await self.wrap_process_item(item)
+                if ret:
+                    yield ret
         else:
             async for item in iterator:
-                yield await self.wrap_process_item(item)
+                ret = await self.wrap_process_item(item)
+                if ret:
+                    yield ret
 
     def generate(self, data: I | Iterator[I]) -> Iterator[I]:
         """It is called when current processor if the first in pipeline. It iterates

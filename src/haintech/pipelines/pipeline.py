@@ -45,7 +45,10 @@ class Pipeline[I, O]:
         """
         ret_list = data is None or isinstance(data, ListOrIterator)
         ret = list([r async for r in await self.run(data)])
-        return ret if ret_list or len(ret) > 1 else ret[0]
+        if ret:
+            return ret if ret_list or len(ret) > 1 else ret[0]
+        else:
+            return None
 
     def get_step(self, no: int) -> Self:
         """Return part (step) of pipeline.
