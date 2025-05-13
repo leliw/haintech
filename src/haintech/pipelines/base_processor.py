@@ -68,12 +68,12 @@ class BaseProcessor[I, O](ABC):
         if isinstance(iterator, Iterator):
             for item in iterator:
                 ret =await self.wrap_process_item(item)
-                if ret:
+                if ret is not None:
                     yield ret
         else:
             async for item in iterator:
                 ret = await self.wrap_process_item(item)
-                if ret:
+                if ret is not None:
                     yield ret
 
     def generate(self, data: I | Iterator[I]) -> Iterator[I]:

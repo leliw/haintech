@@ -45,7 +45,7 @@ class Pipeline[I, O]:
         """
         ret_list = data is None or isinstance(data, ListOrIterator)
         ret = list([r async for r in await self.run(data)])
-        if ret:
+        if ret is not None:
             return ret if ret_list or len(ret) > 1 else ret[0]
         else:
             return None
