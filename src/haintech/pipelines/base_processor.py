@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Any, AsyncGenerator, AsyncIterator, Callable, Iterator, List, Union
+from typing import Any, AsyncGenerator, AsyncIterator, Callable, Iterator, List, Optional, Union
 
 from pydantic import BaseModel
 
-FieldNameOrLambda = Union[str, Callable[[], Any]]
+FieldNameOrLambda = Union[str, Callable[[Any], Any]]
 ListOrIterator = Union[List, Iterator]
 
 
@@ -31,9 +31,9 @@ class BaseProcessor[I, O](ABC):
 
     def __init__(
         self,
-        name: str = None,
-        input: FieldNameOrLambda = None,
-        output: FieldNameOrLambda = None,
+        name: Optional[str] = None,
+        input: Optional[FieldNameOrLambda] = None,
+        output: Optional[FieldNameOrLambda] = None,
     ):
         self.name = name or self.__class__.__name__
         self.input = input
@@ -55,7 +55,7 @@ class BaseProcessor[I, O](ABC):
         else:
             self.source = source
 
-    def _get_iterator(self, data: I | Iterator[I]) -> Iterator[I]:
+    def _get_iterator(self, data: I | Iterator[I]) -> Iterator[I] | AsyncIterator[I]:
         """Returns iterator for processing data.
         It can be overriden to output more or less data than input."""
         return self.source(data) if self.source else self.generate(data)

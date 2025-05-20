@@ -1,16 +1,15 @@
 from abc import ABC, abstractmethod
-from pathlib import Path
-from typing import AsyncIterator, Iterator, override
+from typing import AsyncIterator, Iterator, Optional, override
 from haintech.pipelines import BaseProcessor, FieldNameOrLambda
 
 
-class BaseFlatMapProcessor[I: Path, O: Path](BaseProcessor[I, O], ABC):
+class BaseFlatMapProcessor[I, O](BaseProcessor[I, O], ABC):
     """Base class for all processors that iterate over a iterable in the data and yields the items."""
     def __init__(
         self,
-        name: str = None,
-        input: FieldNameOrLambda = None,
-        output: FieldNameOrLambda = None,
+        name: Optional[str] = None,
+        input: Optional[FieldNameOrLambda] = None,
+        output: Optional[FieldNameOrLambda] = None,
     ):
         super().__init__(name=name, input=input, output=output)
 
