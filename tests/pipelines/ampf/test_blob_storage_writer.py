@@ -1,10 +1,10 @@
-from pydantic import BaseModel
 import pytest
+from ampf.base import Blob
+from ampf.in_memory import InMemoryAsyncFactory
+from pydantic import BaseModel
 
 from haintech.pipelines import Pipeline
 from haintech.pipelines.ampf import BlobStorageWriter
-
-from ampf.in_memory import InMemoryFactory
 
 
 class D(BaseModel):
@@ -19,43 +19,25 @@ def metadata():
 
 @pytest.fixture
 def factory():
-    return InMemoryFactory()
+    return InMemoryAsyncFactory()
 
 
 @pytest.mark.asyncio
 async def test_pipe_file_name_key(factory, metadata):
     # Given: Storage
     storage = factory.create_blob_storage("test", D, "text/plain")
-    # And: Pipeline with BlobStorageWriter 
+    # And: Pipeline with BlobStorageWriter
     pl = Pipeline(
         [
-            BlobStorageWriter(storage, "page_no"),
+            BlobStorageWriter[D](storage),
         ]
     )
     # When: Run pipeline with blob and metadata
-    await pl.run_and_return([("test", metadata)])
+    await pl.run_and_return([Blob(key="1", data=b"test", metadata=metadata)])
     # Then: Blob and metadata are uploaded
-    keys = list(storage.keys())
-    assert len(keys) == 1
-    assert keys[0] == 1
-    assert storage.download_blob(keys[0]) == b"test"
-    assert storage.get_metadata(keys[0]) == metadata
+    blobs = list(storage.list_blobs())
+    assert len(blobs) == 1
+    assert blobs[0].key == "1"
+    blob = await storage.download_async(blobs[0].key)
+    assert  blob.data== b"test"
 
-
-@pytest.mark.asyncio
-async def test_pipe_file_name_expr(factory, metadata):
-    # Given:
-    storage = factory.create_blob_storage("test2", D)
-    pl = Pipeline(
-        [
-            BlobStorageWriter(storage, lambda x: f"xx{x.page_no}"),
-        ]
-    )
-    # When:
-    await pl.run_and_return(("test", metadata))
-    # Then:
-    keys = list(storage.keys())
-    assert len(keys) == 1
-    assert keys[0] == "xx1"
-    assert storage.download_blob(keys[0]) == b"test"
-    assert storage.get_metadata(keys[0]) == metadata

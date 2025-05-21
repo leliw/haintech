@@ -1,27 +1,28 @@
-from typing import Callable, Tuple, Union
+from typing import Callable, Optional, override
+
+from ampf.base import BaseBlobAsyncStorage, Blob
 from pydantic import BaseModel
 
-from ..base_processor import BaseProcessor, get_field_name_or_lambda
-from ampf.base import BaseBlobStorage
+from ..base_processor import BaseProcessor, FieldNameOrLambda
+from ..progress_tracker import ProgressTracker
 
 
-class BlobStorageWriter[M: BaseModel](BaseProcessor[Tuple[bytes, M], Tuple[bytes, M]]):
+class BlobStorageWriter[M: BaseModel](BaseProcessor[Blob[M], Blob[M]]):
     """Write to storage blob and metadata."""
 
     def __init__(
         self,
-        storage: BaseBlobStorage,
-        key_name: Union[str, Callable[[M], str]],
-        name=None,
-        input=None,
-        output=None,
+        storage: BaseBlobAsyncStorage[M] | Callable[[Blob[M]], BaseBlobAsyncStorage[M]],
+        progress_tracker: Optional[ProgressTracker] = None,
+        name: Optional[str] = None,
+        input: Optional[FieldNameOrLambda] = None,
+        output: Optional[FieldNameOrLambda] = None,
     ):
         super().__init__(name, input, output)
-        self.key_name = key_name
         self.storage = storage
+        self.progress_tracker = progress_tracker
 
-    async def process_item(self, data: Tuple[bytes, M]) -> Tuple[bytes, M]:
-        file_name = get_field_name_or_lambda(self.key_name, data[1])
-        content = data[0] if isinstance(data[0], bytes) else data[0].encode()
-        self.storage.upload_blob(file_name, content, data[1])
-        return data
+    @override
+    async def process_item(self, item: Blob[M]) -> Blob[M]:
+        await self.storage.upload_async(item)
+        return item
