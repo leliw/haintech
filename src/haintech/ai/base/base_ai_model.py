@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from inspect import Parameter, signature
 from types import UnionType
-from typing import Any, Callable, Dict, Iterable, Iterator, Literal, Optional
+from typing import Any, Callable, Dict, Iterable, Literal, Optional
 
 from openai.types.shared_params import FunctionDefinition
 
@@ -71,7 +71,7 @@ class BaseAIModel(ABC):
         Returns:
             string representation of AIPrompt object
         """
-        if isinstance(prompt, str):
+        if not prompt or isinstance(prompt, str):
             return prompt
         ret = ""
         if prompt.persona:

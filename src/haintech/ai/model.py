@@ -129,7 +129,7 @@ class AIModelInteraction(BaseModel):
 
     uid: str = Field(default_factory=lambda: uuid.uuid4().hex)
     model: str
-    message: AIModelInteractionMessage = None
+    message: Optional[AIModelInteractionMessage] = None
     context: Optional[str] = None
     prompt: Optional[AIPrompt] = None
     history: List[AIModelInteractionMessage]
