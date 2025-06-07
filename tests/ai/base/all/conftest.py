@@ -10,13 +10,17 @@ from haintech.ai import (
     BaseAIModel,
     BaseAITextEmbeddingModel,
 )
+from haintech.ai.anthropic_ai_model import AntrhopicAIModel
 from haintech.ai.deep_seek.deep_seek_ai_model import DeepSeekAIModel
 from haintech.ai.google_generativeai import GoogleAIModel, GoogleAITextEmbeddingModel
 from haintech.ai.hugging_face import HuggingFaceTextEmbeddingModel
 from haintech.ai.open_ai import OpenAIModel, OpenAITextEmbeddingModel
 
 
-@pytest.fixture(params=[OpenAIModel, GoogleAIModel, DeepSeekAIModel], scope="session")
+@pytest.fixture(
+    params=[OpenAIModel, GoogleAIModel, DeepSeekAIModel, AntrhopicAIModel],
+    scope="session",
+)
 def ai_model(request: pytest.FixtureRequest) -> BaseAIModel:
     return request.param(parameters={"temperature": 0})
 

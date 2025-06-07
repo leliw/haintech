@@ -38,6 +38,24 @@ wheels = [
 ]
 
 [[package]]
+name = "anthropic"
+version = "0.52.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "httpx" },
+    { name = "jiter" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/63/84/95126ee8df1acedd60bd03fe368d6335d65fe92e2c97581a81a82e8f576b/anthropic-0.52.2.tar.gz", hash = "sha256:9047bc960e8513950579c9cb730c16a84af3fcb56341ad7dc730772f83757050", size = 306204 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/77/3b/6f67f4e061d73cfaffc44dd41cbbe8b09efe1ec37b8135a2bcc043736d62/anthropic-0.52.2-py3-none-any.whl", hash = "sha256:00d52555f503e81e21aff0103db04cd93979cdf87ce8dd43c660ca6deae83ac6", size = 286262 },
+]
+
+[[package]]
 name = "anyio"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
@@ -360,7 +378,7 @@ wheels = [
 
 [[package]]
 name = "haintech"
-version = "0.1.37"
+version = "0.1.38"
 source = { editable = "." }
 dependencies = [
     { name = "ampf" },
@@ -371,6 +389,9 @@ dependencies = [
 ]
 
 [package.optional-dependencies]
+anthropic = [
+    { name = "anthropic" },
+]
 huggingface = [
     { name = "sentence-transformers" },
 ]
@@ -387,13 +408,14 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "ampf", specifier = ">=0.1.18" },
+    { name = "anthropic", marker = "extra == 'anthropic'", specifier = ">=0.52.2" },
     { name = "google-genai", specifier = ">=1.7.0" },
     { name = "google-generativeai", specifier = ">=0.8.4" },
     { name = "openai", specifier = ">=1.68.2" },
     { name = "pydantic", specifier = ">=2.10.6" },
     { name = "sentence-transformers", marker = "extra == 'huggingface'", specifier = ">=4.0.2" },
 ]
-provides-extras = ["huggingface"]
+provides-extras = ["huggingface", "anthropic"]
 
 [package.metadata.requires-dev]
 dev = [
