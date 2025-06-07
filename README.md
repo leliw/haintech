@@ -11,3 +11,9 @@ There are two packages:
 ```bash
 source ./build.sh
 ```
+
+## Use
+
+```bash
+uv add haintech --index "https://europe-west3-python.pkg.dev/development-428212/pip/simple/"
+```
