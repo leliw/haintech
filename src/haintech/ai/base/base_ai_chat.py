@@ -2,7 +2,7 @@ import json
 import logging
 from abc import ABC
 from pathlib import Path
-from typing import Callable, Iterator, List, Literal, TypeAlias
+from typing import Callable, Iterator, List, Literal, Optional, TypeAlias
 
 from haintech.ai.base.base_ai_model import BaseAIModel
 from haintech.ai.model import (
@@ -23,9 +23,9 @@ class BaseAIChat(ABC):
 
     def __init__(
         self,
-        ai_model: BaseAIModel = None,
-        context: str | AIPrompt = None,
-        session: AIModelSession = None,
+        ai_model: BaseAIModel,
+        context: Optional[str | AIPrompt] = None,
+        session: Optional[AIModelSession] = None,
     ) -> None:
         """Base AIChat
 
@@ -54,12 +54,13 @@ class BaseAIChat(ABC):
             for message in self.session.messages_iterator():
                 if message.role != "system":
                     self.add_message(message)
-            if self.session.get_last_response():
-                self.add_response_message(self.session.get_last_response())
+            response = self.session.get_last_response()
+            if response:
+                self.add_response_message(response)
 
     def _get_response(
         self,
-        message: AIModelInteractionMessage = None,
+        message: Optional[AIModelInteractionMessage] = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         """Get response from LLM
@@ -78,7 +79,7 @@ class BaseAIChat(ABC):
         )
         return response
 
-    def add_message(self, message: AIModelInteractionMessage = None) -> None:
+    def add_message(self, message: AIModelInteractionMessage) -> None:
         """Add message to AI chat session
 
         Args:
@@ -110,7 +111,7 @@ class BaseAIChat(ABC):
         for message in self.history:
             yield message
 
-    def _get_context(self, message: AIModelInteractionMessage = None) -> str | AIPrompt:
+    def _get_context(self, message: Optional[AIModelInteractionMessage] = None) -> str | AIPrompt | None:
         """Returns context for LLM (self.context).
 
         It can be overriden to return dynamic context.
@@ -127,7 +128,7 @@ class BaseAIChat(ABC):
     def set_interaction_logger(self, logger: Callable[[AIModelInteraction], None]):
         self._interaction_logger = logger
 
-    def get_response(self, message: str = None) -> AIChatResponse:
+    def get_response(self, message: Optional[str] = None) -> AIChatResponse:
         i_msg = (
             AIModelInteractionMessage(role="user", content=message) if message else None
         )
@@ -139,10 +140,10 @@ class BaseAIChat(ABC):
         self.add_response_message(m_resp)
         return m_resp
 
-    def get_text_response(self, message: str = None) -> str:
+    def get_text_response(self, message: Optional[str] = None) -> str:
         return self.get_response(message).content
 
-    def get_json_response(self, message: str = None) -> str:
+    def get_json_response(self, message: Optional[str] = None) -> str:
         i_msg = (
             AIModelInteractionMessage(role="user", content=message) if message else None
         )

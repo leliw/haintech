@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from inspect import Parameter, signature
 from types import UnionType
-from typing import Any, Callable, Dict, Iterator, Literal
+from typing import Any, Callable, Dict, Iterable, Iterator, Literal, Optional
 
 from openai.types.shared_params import FunctionDefinition
 
@@ -20,12 +20,12 @@ class BaseAIModel(ABC):
     @abstractmethod
     def get_chat_response(
         self,
-        message: AIModelInteractionMessage = None,
-        prompt: AIPrompt = None,
-        context: str | AIPrompt = None,
-        history: Iterator[AIModelInteractionMessage] = None,
-        functions: Dict[Callable, Any] = None,
-        interaction_logger: Callable[[AIModelInteraction], None] = None,
+        message: Optional[AIModelInteractionMessage] = None,
+        prompt: Optional[str | AIPrompt] = None,
+        context: Optional[str | AIPrompt] = None,
+        history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        functions: Optional[Dict[Callable, Any]] = None,
+        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         """Return chat response from LLM
@@ -43,12 +43,12 @@ class BaseAIModel(ABC):
 
     async def get_chat_response_async(
         self,
-        message: AIModelInteractionMessage = None,
-        prompt: AIPrompt = None,
-        context: str | AIPrompt = None,
-        history: Iterator[AIModelInteractionMessage] = None,
-        functions: Dict[Callable, Any] = None,
-        interaction_logger: Callable[[AIModelInteraction], None] = None,
+        message: Optional[AIModelInteractionMessage] = None,
+        prompt: Optional[AIPrompt] = None,
+        context: Optional[str | AIPrompt] = None,
+        history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        functions: Optional[Dict[Callable, Any]] = None,
+        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         return self.get_chat_response(
@@ -149,8 +149,8 @@ class BaseAIModel(ABC):
     def prepare_function_definition(
         cls,
         func: Callable[..., Any],
-        name: str = None,
-        description: str = None,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
     ) -> FunctionDefinition:
         """Creates an OpenAI FunctionDefinition from a Python callable.
 

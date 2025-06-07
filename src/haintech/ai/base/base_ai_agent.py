@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Callable, Dict, Iterator, List, Tuple, override
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, override
 
 from haintech.ai.ai_task_executor import AITaskExecutor
 
@@ -22,14 +22,14 @@ class BaseAIAgent(BaseAIChat):
 
     def __init__(
         self,
-        name: str = None,
-        description: str = None,
-        ai_model: BaseAIModel = None,
-        prompt: AIPrompt = None,
-        context: str = None,
-        session: AIModelSession = None,
-        searcher: BaseRAGSearcher = None,
-        functions: List[Callable] = None,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        ai_model: Optional[BaseAIModel] = None,
+        prompt: Optional[AIPrompt] = None,
+        context: Optional[str] = None,
+        session: Optional[AIModelSession] = None,
+        searcher: Optional[BaseRAGSearcher] = None,
+        functions: Optional[List[Callable]] = None,
     ):
         """Base AI Agent.
 
@@ -55,7 +55,7 @@ class BaseAIAgent(BaseAIChat):
         self.rag_items = []
 
     def add_function(
-        self, function: Callable, name: str = None, definition: Any = None
+        self, function: Callable, name: Optional[str] = None, definition: Any = None
     ) -> None:
         name = name or function.__name__
         definition = definition or self.ai_model.prepare_function_definition(
@@ -77,7 +77,7 @@ class BaseAIAgent(BaseAIChat):
         return f"Agent__{self.name}"
 
     def _get_response(
-        self, message: AIModelInteractionMessage = None
+        self, message: Optional[AIModelInteractionMessage] = None
     ) -> AIChatResponse:
         """Get response from LLM
 
@@ -95,7 +95,7 @@ class BaseAIAgent(BaseAIChat):
         )
         return response
 
-    def get_response(self, message: str = None) -> AIChatResponse:
+    def get_response(self, message: Optional[str] = None) -> AIChatResponse:
         """Get response from LLM
 
         Args:

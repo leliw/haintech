@@ -2,7 +2,7 @@ import logging
 import os
 from pathlib import Path
 import subprocess
-from typing import Dict, List, TypeAlias
+from typing import Dict, List, Optional, TypeAlias
 
 StrPath: TypeAlias = str | Path
 
@@ -23,7 +23,7 @@ run_bash_command_definition = {
 }
 
 
-def run_bash_command(command: str, cwd: str = None) -> Dict[str, str]:
+def run_bash_command(command: str, cwd: Optional[str] = None) -> Dict[str, str]:
     """
     Run a bash command and return the output
 
@@ -73,7 +73,7 @@ save_text_to_file_definition = {
 }
 
 
-def save_text_to_file(file_path: StrPath, content: str, parent_dir: StrPath = None):
+def save_text_to_file(file_path: StrPath, content: str, parent_dir: Optional[StrPath] = None):
     """
     Save text content to a file
 
@@ -123,7 +123,7 @@ load_text_from_file_definition = {
 }
 
 
-def load_text_from_file(file_path: StrPath, parent_dir: StrPath = None) -> str:
+def load_text_from_file(file_path: StrPath, parent_dir: Optional[StrPath] = None) -> str:
     """
     Load text content from a file
 
@@ -211,7 +211,7 @@ get_git_directory_structure_definition = {
 }
 
 
-def get_git_directory_structure(rootdir: str) -> Dict[str, List[str]]:
+def get_git_directory_structure(rootdir: StrPath) -> Dict[str, List[str]]:
     """
     Get the directory structure of a git repository filtered by git tracked files.
 
@@ -234,7 +234,7 @@ def get_git_directory_structure(rootdir: str) -> Dict[str, List[str]]:
 
 
 def get_directory_structure_formated(
-    path: str = ".", exclude_dirs: List[str] = None, max_depth: int = 1
+    path: str = ".", exclude_dirs: Optional[List[str]] = None, max_depth: int = 1
 ) -> str:
     """
     Displays the structure of the current directory and its subdirectories up to a specified depth,
