@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from haintech.ai import (
     AIChatSession,
@@ -30,7 +31,7 @@ def get_remaining_home_office_days(year: int):
 
 
 class HRAgent(BaseAIAgent):
-    def __init__(self, ai_model: BaseAIModel, session: AIChatSession = None):
+    def __init__(self, ai_model: BaseAIModel, session: Optional[AIChatSession] = None):
         super().__init__(
             ai_model=ai_model,
             description="HR Assistant",

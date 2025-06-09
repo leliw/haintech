@@ -39,7 +39,7 @@ def test_get_chat_response_json(ai_model: BaseAIModel):
     # When: I get response from chat
     resp = ai_model.get_chat_response(
         history=[
-            AIModelInteractionMessage(role="user", content="The day after Sunday is? Retrun JSON. Example: {'answer': 'Sunday'}")
+            AIModelInteractionMessage(role="user", content="The day after Sunday is? Retrun JSON. Example: {\"answer\": \"Sunday\"}")
         ],
         response_format="json",
     )

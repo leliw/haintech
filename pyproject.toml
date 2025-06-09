@@ -20,6 +20,9 @@ dependencies = [
 huggingface = [
     "sentence-transformers>=4.0.2",
 ]
+anthropic = [
+    "anthropic>=0.52.2",
+]
 
 [build-system]
 requires = ["hatchling"]

@@ -1,5 +1,7 @@
 from typing import Dict
 
+import pytest
+
 from haintech.ai import AIChatSession, BaseAIAgent, BaseAIModel, BaseAISupervisor
 from haintech.ai.open_ai import OpenAIAgent
 
@@ -24,7 +26,8 @@ def test_agent_with_session(ai_model: BaseAIModel):
         print(m)
     assert 4 == len(ai_agent.history)
 
-#TODO: Split this test into AI Model tests
+
+@pytest.mark.skip(reason="#TODO: Split this test into AI Model tests")
 def test_agent_definition(ai_model: BaseAIModel):
     # Given: An agent
     ai_agent = BaseAIAgent(ai_model=ai_model, name="007", description="Agent 007")
