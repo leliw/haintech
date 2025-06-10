@@ -46,7 +46,7 @@ class BaseProcessor[I, O](ABC):
         """
         raise NotImplementedError
 
-    def set_source(self, source: BaseProcessor | AsyncGenerator[I, None]):
+    def set_source(self, source: BaseProcessor[Any, Any] | AsyncGenerator[I, None]):
         """Set the source of the processor.
         It is called by Pipeline._build() method.
         """

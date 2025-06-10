@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 import logging
-from typing import Iterator, List, Self
+from typing import Any, Iterator, List, Optional
 
 from .base_processor import BaseProcessor, ListOrIterator
 from .checkpoint_processor import CheckpointProcessor
@@ -8,7 +10,7 @@ from .checkpoint_processor import CheckpointProcessor
 class Pipeline[I, O]:
     """Pipeline class that runs a series of processors on data."""
 
-    def __init__(self, processors: list[BaseProcessor] = None):
+    def __init__(self, processors: Optional[List[BaseProcessor]] = None):
         self.processors = processors or []
         self._log = logging.getLogger(__name__)
 
@@ -18,16 +20,20 @@ class Pipeline[I, O]:
         """
         self.processors.append(processor)
 
-    def _build(self) -> BaseProcessor:
+    def _build(self) -> BaseProcessor[Any, Any]:
         """
         Build pipeline from processors.
         """
         pipeline = None
         for i, processor in enumerate(self.processors):
             if i != 0:
-                processor.set_source(pipeline)
+                if pipeline:
+                    processor.set_source(pipeline)
             pipeline = processor
-        return pipeline
+        if pipeline:
+            return pipeline
+        else:
+            raise ValueError("Pipeline is empty")
 
     async def run(self, data: I | Iterator[I] = None):
         """Run pipeline with data. Return async generator of results.
@@ -39,7 +45,7 @@ class Pipeline[I, O]:
         pipeline = self._build()
         return pipeline.process(data)
 
-    async def run_and_return(self, data: I | Iterator[I] = None) -> O | List[O]:
+    async def run_and_return(self, data: I | Iterator[I] = None) -> O | List[O] | None:
         """Run pipeline and return result.
         If the last processor returns a generator, return a list of results.
         """
@@ -50,7 +56,7 @@ class Pipeline[I, O]:
         else:
             return None
 
-    def get_step(self, no: int) -> Self:
+    def get_step(self, no: int) -> Pipeline[Any, Any]:
         """Return part (step) of pipeline.
 
         Pipeline is divided into steps by CheckpointProcessor.

@@ -7,7 +7,7 @@ from ampf.base import BaseStorage
 class StorageReader[str, M: BaseModel](BaseProcessor[str, M]):
     def __init__(
         self,
-        storage: BaseStorage,
+        storage: BaseStorage[M],
         name=None,
         input=None,
         output=None,

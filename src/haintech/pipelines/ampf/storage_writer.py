@@ -1,4 +1,4 @@
-from typing import Callable, Union, override
+from typing import Callable, Optional, Union, override
 
 from ampf.base import BaseStorage
 from pydantic import BaseModel
@@ -13,8 +13,8 @@ class StorageWriter[M: BaseModel](CheckpointProcessor[M]):
     def __init__(
         self,
         storage: BaseStorage[M] | Callable[[M], BaseStorage[M]],
-        key_name: Union[str, Callable[[M], str]] = None,
-        progress_tracker: ProgressTracker = None,
+        key_name: Optional[Union[str, Callable[[M], str]]] = None,
+        progress_tracker: Optional[ProgressTracker] = None,
         name=None,
         input=None,
         output=None,
