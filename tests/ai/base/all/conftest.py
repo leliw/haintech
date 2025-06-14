@@ -1,4 +1,4 @@
-from typing import Iterator
+from typing import Iterator, Optional
 
 import pytest
 from ampf.local import LocalFactory
@@ -80,7 +80,7 @@ def ai_chat_with_session(ai_model: GoogleAIModel, session: AIChatSession) -> Bas
 
 
 class HRAgent(BaseAIAgent):
-    def __init__(self, ai_model: BaseAIModel, session: AIChatSession = None):
+    def __init__(self, ai_model: BaseAIModel, session: Optional[AIChatSession] = None):
         super().__init__(
             description="HR assistant. Answer prersonal information about HR, days off and vacation related question.",
             context="You are a helpful HR assistant.",
