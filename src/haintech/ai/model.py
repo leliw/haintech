@@ -125,13 +125,13 @@ class AIModelInteraction(BaseModel):
 
     uid: str = Field(default_factory=lambda: uuid.uuid4().hex)
     model: str
-    message: Optional[AIModelInteractionMessage] = None
-    context: Optional[str] = None
-    prompt: Optional[AIPrompt] = None
-    history: List[AIModelInteractionMessage]
     tools: Optional[List[AIModelInteractionTool]] = None
     parallel_tool_calls: Optional[bool] = None
     response_format: Optional[Dict[str, str]] = None
+    context: Optional[str] = None
+    prompt: Optional[AIPrompt] = None
+    history: List[AIModelInteractionMessage]
+    message: Optional[AIModelInteractionMessage] = None
     response: Optional[AIChatResponse] = None
 
 
@@ -176,10 +176,12 @@ class AIChatSession(BaseModel, AIModelSession):
     @override
     def messages_iterator(self) -> Iterator[AIModelInteractionMessage]:
         """Itrerates over all messages (from last interaction)"""
-        if self.interactions:
-            for message in self.get_last_interaction().history:
+        last_interaction = self.get_last_interaction()
+        if last_interaction:
+            for message in last_interaction.history:
                 yield message
-            yield self.get_last_interaction().message
+            if last_interaction.message:
+                yield last_interaction.message
 
     def get_last_interaction(self) -> Optional[AIModelInteraction]:
         """Get last interaction."""
@@ -189,8 +191,9 @@ class AIChatSession(BaseModel, AIModelSession):
 
     def add_message(self, message: AIModelInteractionMessage):
         """Add message to last interaction."""
-        if self.interactions:
-            self.get_last_interaction().history.append(message)
+        last_interaction = self.get_last_interaction()
+        if last_interaction:
+            last_interaction.history.append(message)
 
     def __str__(self) -> str:
         ret = ""
@@ -258,7 +261,7 @@ class AIAgentSession(AIModelSession):
     with the agent name differentiator.
     """
 
-    def __init__(self, agent_name: str, interactions: List[Tuple[str, AIModelInteraction]]):
+    def __init__(self, agent_name: str, interactions: List[Tuple[str|None, AIModelInteraction]]):
         self.agent_name = agent_name
         self.interactions = interactions
 
