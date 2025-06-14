@@ -12,7 +12,7 @@ class RAGQuery(BaseModel):
     """
 
     text: str
-    keywords: List[str] = None
+    keywords: Optional[List[str]] = None
     limit: int = 5
 
 
@@ -51,9 +51,7 @@ class AIModelInteractionMessage(BaseModel):
     tool_calls: Optional[List[AIModelInteractionMessageToolCall]] = None
 
     def __str__(self) -> str:
-        ret = f"{self.role:10}:" + (
-            f" {self.tool_call_id} => " if self.tool_call_id else ""
-        )
+        ret = f"{self.role:10}:" + (f" {self.tool_call_id} => " if self.tool_call_id else "")
         if self.content:
             if len(self.content) < 1024:
                 ret += f" {self.content}"
@@ -88,9 +86,7 @@ class AIChatResponse(BaseModel):
         if self.tool_calls:
             for t in self.tool_calls:
                 tool_calls.append(AIModelInteractionMessageToolCall(**t.model_dump()))
-        return AIModelInteractionMessage(
-            role="assistant", content=self.content, tool_calls=tool_calls
-        )
+        return AIModelInteractionMessage(role="assistant", content=self.content, tool_calls=tool_calls)
 
     def __str__(self) -> str:
         ret = []
@@ -172,8 +168,9 @@ class AIChatSession(BaseModel, AIModelSession):
     @override
     def get_last_response(self) -> Optional[AIChatResponse]:
         """Get last response."""
-        if self.interactions:
-            return self.get_last_interaction().response
+        last_interaction = self.get_last_interaction()
+        if last_interaction:
+            return last_interaction.response
         return None
 
     @override
@@ -199,7 +196,9 @@ class AIChatSession(BaseModel, AIModelSession):
         ret = ""
         for m in self.messages_iterator():
             ret += str(m) + "\n"
-        ret += str(self.get_last_response().toMessage()) + "\n"
+        last_response = self.get_last_response()
+        if last_response:
+            ret += str(last_response.toMessage()) + "\n"
         return ret
 
 
@@ -208,8 +207,8 @@ class AISupervisorSession(BaseModel, AIModelSession):
 
     uid: str = Field(default_factory=lambda: uuid.uuid4().hex)
     datetime: str = Field(default_factory=lambda: str(datetime.now()))
-    interactions: List[Tuple[str, AIModelInteraction]] = Field(default_factory=list)
-    agent_name: str = None
+    interactions: List[Tuple[str|None, AIModelInteraction]] = Field(default_factory=list)
+    agent_name: Optional[str] = None
 
     def create_agent_session(self, agent_name: str) -> AIModelSession:
         """Create agent session."""
@@ -236,7 +235,8 @@ class AISupervisorSession(BaseModel, AIModelSession):
                 if agent_name == self.agent_name:
                     for message in interaction.history:
                         yield message
-                    yield interaction.message
+                    if interaction.message:
+                        yield interaction.message
                     # I've found the last iteration for the agent
                     return
 
@@ -244,7 +244,9 @@ class AISupervisorSession(BaseModel, AIModelSession):
         ret = ""
         for m in self.messages_iterator():
             ret += str(m) + "\n"
-        ret += str(self.get_last_response().toMessage()) + "\n"
+        last_response = self.get_last_response()
+        if last_response:
+            ret += str(last_response.toMessage()) + "\n"
         return ret
 
 
@@ -256,9 +258,7 @@ class AIAgentSession(AIModelSession):
     with the agent name differentiator.
     """
 
-    def __init__(
-        self, agent_name: str, interactions: List[Tuple[str, AIModelInteraction]]
-    ):
+    def __init__(self, agent_name: str, interactions: List[Tuple[str, AIModelInteraction]]):
         self.agent_name = agent_name
         self.interactions = interactions
 
@@ -283,7 +283,8 @@ class AIAgentSession(AIModelSession):
                 if agent_name == self.agent_name:
                     for message in interaction.history:
                         yield message
-                    yield interaction.message
+                    if interaction.message:
+                        yield interaction.message
                     # I've found the last iteration for the agent
                     return
 
