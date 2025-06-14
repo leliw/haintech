@@ -1,7 +1,7 @@
 import logging
 import os
-from pathlib import Path
 import subprocess
+from pathlib import Path
 from typing import Dict, List, Optional, TypeAlias
 
 StrPath: TypeAlias = str | Path
@@ -14,9 +14,7 @@ run_bash_command_definition = {
     "parameters": {
         "type": "object",
         "required": ["command"],
-        "properties": {
-            "command": {"type": "string", "description": "The bash command to run"}
-        },
+        "properties": {"command": {"type": "string", "description": "The bash command to run"}},
         "additionalProperties": False,
     },
     "strict": True,
@@ -37,9 +35,7 @@ def run_bash_command(command: str, cwd: Optional[str] = None) -> Dict[str, str]:
     if cwd and cwd.startswith("/"):
         cwd = cwd[1:] or None
     _log.debug(f"Running bash command: {command}")
-    process = subprocess.Popen(
-        command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True
-    )
+    process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
     out, err = process.communicate()
     _log.debug(f"Bash command output: {out.decode()}")
     if err:
@@ -73,14 +69,13 @@ save_text_to_file_definition = {
 }
 
 
-def save_text_to_file(file_path: StrPath, content: str, parent_dir: Optional[StrPath] = None):
-    """
-    Save text content to a file
+def save_text_to_file(file_path: StrPath, text_content: str, parent_dir: Optional[StrPath] = None):
+    """Saves the provided text content to a specified file path. This function writes the complete text content to the file, creating the file if it doesn't exist or overwriting it if it does exist.
 
     Args:
-        file_path: The path to the file
-        content: The text content to save
-        parent_dir: The parent directory of the file
+        file_path: The full path where the file should be saved (e.g., '/path/to/file.txt', 'documents/notes.txt')
+        text_content: The complete text content that will be written to the file. This parameter is mandatory and contains all the text data to be saved.
+        parent_dir: Optional: The parent directory path where the file should be created. If not provided, the directory will be inferred from file_path.
     """
     _log.debug(f"Saving text content to file: {file_path}")
     if parent_dir and isinstance(parent_dir, str):
@@ -98,7 +93,7 @@ def save_text_to_file(file_path: StrPath, content: str, parent_dir: Optional[Str
     if file_dir:
         os.makedirs(file_dir, exist_ok=True)
     with open(file_path, "wt") as file:
-        file.write(content)
+        file.write(text_content)
 
 
 load_text_from_file_definition = {
@@ -140,7 +135,7 @@ def load_text_from_file(file_path: StrPath, parent_dir: Optional[StrPath] = None
     if parent_dir:
         file_path_abs = os.path.abspath(file_path)
         parent_dir_abs = os.path.abspath(parent_dir)
-        if file_path_abs.startswith(parent_dir_abs):        
+        if file_path_abs.startswith(parent_dir_abs):
             file_path = Path(file_path)
         else:
             file_path = os.path.join(parent_dir, file_path)
@@ -184,9 +179,7 @@ def get_git_tracked_files(rootdir: Path) -> set[Path]:
         A set of paths relative to the rootdir that are tracked by git.
     """
     try:
-        git_files = subprocess.check_output(
-            ["git", "ls-files"], cwd=str(rootdir), text=True
-        )
+        git_files = subprocess.check_output(["git", "ls-files"], cwd=str(rootdir), text=True)
         tracked_files = set(Path(line) for line in git_files.splitlines())
         return tracked_files
     except subprocess.CalledProcessError as e:

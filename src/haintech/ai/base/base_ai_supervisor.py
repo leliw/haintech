@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 from haintech.ai.base.base_ai_agent import BaseAIAgent
 from haintech.ai.base.base_ai_model import BaseAIModel
@@ -11,14 +11,14 @@ class BaseAISupervisor(BaseAIAgent):
 
     def __init__(
         self,
-        name: str = None,
-        description: str = None,
-        ai_model: BaseAIModel = None,
-        context: str = None,
-        session: AISupervisorSession = None,
-        searcher: BaseRAGSearcher = None,
-        functions: List[Callable] = None,
-        agents: List[BaseAIAgent] = None,
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+        ai_model: Optional[BaseAIModel] = None,
+        context: Optional[str] = None,
+        session: Optional[AISupervisorSession] = None,
+        searcher: Optional[BaseRAGSearcher] = None,
+        functions: Optional[List[Callable]] = None,
+        agents: Optional[List[BaseAIAgent]] = None,
     ):
         super().__init__(
             name=name,
@@ -29,7 +29,7 @@ class BaseAISupervisor(BaseAIAgent):
             searcher=searcher,
             functions=functions,
         )
-        self.session: AISupervisorSession = session
+        self.session: Optional[AISupervisorSession] = session
         self.agents: Dict[str, BaseAIAgent] = {}
         if agents:
             for agent in agents:
@@ -51,7 +51,8 @@ class BaseAISupervisor(BaseAIAgent):
             name=agent.get_name(),
             definition=self.get_agent_definition(agent),
         )
-        agent.set_session(self.session.create_agent_session(agent.name))
+        if self.session:
+            agent.set_session(self.session.create_agent_session(agent.name))
         self.agents[agent.name] = agent
 
     def get_agent_definition(self, agent: BaseAIAgent) -> Any:
@@ -95,10 +96,11 @@ class BaseAISupervisor(BaseAIAgent):
                         "Calling agent: %s : %s with arguments: %s", id, name, arguments
                     )
                     agent_resp = self.call_agent(id, name[7:], **arguments)
-                    if agent_resp.tool_calls:
+                    if agent_resp and agent_resp.tool_calls:
                         return agent_resp
                     # Agent returns response without calling tools
-                    self.add_tool_message(id, agent_resp.content)
+                    if agent_resp and agent_resp.content:
+                        self.add_tool_message(id, agent_resp.content)
 
                 else:
                     self.call_function(id, name, **arguments)
@@ -147,7 +149,7 @@ class BaseAISupervisor(BaseAIAgent):
             self.agent_tool_calls[tool_call_id] = []
             # And return copy of agent response with renamed call_ids
             response = AIChatResponse(**response.model_dump())
-            for tool_call in response.tool_calls:
+            for tool_call in response.tool_calls or []:
                 tool_call.id = f"{agent_name}__{tool_call.id}"
                 self.agent_tool_calls[tool_call_id].append(tool_call.id)
         else:
