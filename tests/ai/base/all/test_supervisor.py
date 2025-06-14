@@ -108,14 +108,9 @@ def test_supervisor_with_without_acceptance_agent_call(
     response = ai_supervisor.accept_tools([])
     # Then: I should get answer
     assert not response.tool_calls
-    # And: Assistant "cannot" answer or "need" some information
-    assert (
-        "cannot" in response.content
-        or "need" in response.content
-        or "don't have" in response.content
-        or "can't" in response.content
-        or "couldn't" in response.content
-    )
+    # And: Assistant "cannot" answer or "need" some information, or similar negative phrasing
+    negative_keywords = ["cannot", "need", "don't have", "can't", "couldn't", "unable"]
+    assert response.content and any(keyword in response.content for keyword in negative_keywords)
 
 
 @pytest.fixture

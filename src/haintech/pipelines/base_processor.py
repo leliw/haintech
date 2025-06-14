@@ -5,7 +5,8 @@ from typing import Any, AsyncGenerator, AsyncIterator, Callable, Iterator, List,
 
 from pydantic import BaseModel
 
-FieldNameOrLambda = Union[str, Callable[[Any], Any]]
+FieldNameOrLambda = Union[str, Callable[[Any], str]]
+FieldNameOrLambda2 = Union[str, Callable[[Any, Any], str]]
 ListOrIterator = Union[List, Iterator]
 
 
@@ -33,7 +34,7 @@ class BaseProcessor[I, O](ABC):
         self,
         name: Optional[str] = None,
         input: Optional[FieldNameOrLambda] = None,
-        output: Optional[FieldNameOrLambda] = None,
+        output: Optional[FieldNameOrLambda2] = None,
     ):
         self.name = name or self.__class__.__name__
         self.input = input
