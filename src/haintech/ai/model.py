@@ -305,7 +305,7 @@ class AIFunction(BaseModel):
     """AI function model."""
 
     name: str
-    description: str
+    description: Optional[str] = None
     parameters: List[AIFunctionParameter]
     return_type: Optional[str] = None
     return_description: Optional[str] = None

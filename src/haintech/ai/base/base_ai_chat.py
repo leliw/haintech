@@ -129,9 +129,7 @@ class BaseAIChat(ABC):
         self._interaction_logger = logger
 
     def get_response(self, message: Optional[str] = None) -> AIChatResponse:
-        i_msg = (
-            AIModelInteractionMessage(role="user", content=message) if message else None
-        )
+        i_msg = AIModelInteractionMessage(role="user", content=message) if message else None
         # Call LLM
         m_resp = self._get_response(message=i_msg)
         # Add message and response to history
@@ -147,9 +145,7 @@ class BaseAIChat(ABC):
         return ret
 
     def get_json_response(self, message: Optional[str] = None) -> str:
-        i_msg = (
-            AIModelInteractionMessage(role="user", content=message) if message else None
-        )
+        i_msg = AIModelInteractionMessage(role="user", content=message) if message else None
         # Call LLM
         m_resp = self._get_response(message=i_msg, response_format="json")
         # Add message and response to history

@@ -4,9 +4,9 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, overrid
 from haintech.ai.ai_task_executor import AITaskExecutor
 
 from ..model import (
-    AIAgentSession,
     AIChatResponse,
     AIModelInteractionMessage,
+    AIModelSession,
     AIPrompt,
     AITask,
     RAGQuery,
@@ -28,7 +28,7 @@ class BaseAIAgent(BaseAIChat):
         description: Optional[str] = None,
         prompt: Optional[AIPrompt] = None,
         context: Optional[str] = None,
-        session: Optional[AIAgentSession] = None,
+        session: Optional[AIModelSession] = None,
         searcher: Optional[BaseRAGSearcher] = None,
         functions: Optional[List[Callable]] = None,
     ):

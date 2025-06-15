@@ -134,13 +134,11 @@ class BaseAIModel(ABC):
             }  # Default type is string, could be improved.
             parameters["required"].append(param_name)
 
-        parameters["additionalProperties"] = (
-            False  # Ensure no extra properties are allowed
-        )
+        parameters["additionalProperties"] = False  # Ensure no extra properties are allowed
 
         return FunctionDefinition(
             name=ai_function.name,
-            description=ai_function.description,
+            description=ai_function.description or "",
             parameters=parameters,
             strict=True,
         )
@@ -193,32 +191,21 @@ class BaseAIModel(ABC):
         name = func.__name__
         description = docstring.strip().split("\n")[0]
         try:
-            return_type = (
-                sig.return_annotation.__name__
-                if sig.return_annotation != Parameter.empty
-                else "str"
-            )
+            return_type = sig.return_annotation.__name__ if sig.return_annotation != Parameter.empty else "str"
         except AttributeError:
             return_type = None
 
         parameters = []
         for param in sig.parameters.values():
-            if (
-                param.kind == Parameter.VAR_KEYWORD
-                or param.kind == Parameter.VAR_POSITIONAL
-            ):
-                raise ValueError(
-                    "Function cannot have variable keyword or positional arguments."
-                )
+            if param.kind == Parameter.VAR_KEYWORD or param.kind == Parameter.VAR_POSITIONAL:
+                raise ValueError("Function cannot have variable keyword or positional arguments.")
 
             param_name = param.name
             param_description = ""  # Default description
 
             # Attempt to extract description from docstring (this is very basic and could be improved).
             docstring_lines = docstring.strip().split("\n")
-            for line in docstring_lines[
-                1:
-            ]:  # Skip the first line (already in description)
+            for line in docstring_lines[1:]:  # Skip the first line (already in description)
                 if line.strip().startswith(param_name + ":"):
                     param_description = line.strip().split(":", 1)[1].strip()
                     break
