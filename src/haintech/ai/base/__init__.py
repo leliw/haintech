@@ -1,4 +1,5 @@
 from .base_ai_agent import BaseAIAgent
+from .base_ai_agent_async import BaseAIAgentAsync
 from .base_ai_chat import BaseAIChat
 from .base_ai_chat_async import BaseAIChatAsync
 
@@ -13,6 +14,7 @@ __all__ = [
     "BaseAIChat",
     "BaseAIChatAsync",
     "BaseAIAgent",
+    "BaseAIAgentAsync",
     "BaseAISupervisor",
     "BaseAITextEmbeddingModel",
 ]

@@ -1,5 +1,6 @@
 from .base import (
     BaseAIAgent,
+    BaseAIAgentAsync,
     BaseAIChat,
     BaseAIChatAsync,
     BaseAIModel,
@@ -42,6 +43,7 @@ __all__ = [
     "BaseAIChat",
     "BaseAIChatAsync",
     "BaseAIAgent",
+    "BaseAIAgentAsync",
     "BaseAISupervisor",
     "BaseAITextEmbeddingModel",
     "BaseRAGSearcher",

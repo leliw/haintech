@@ -3,20 +3,19 @@ from typing import Dict
 import pytest
 
 from haintech.ai import AIChatSession, BaseAIAgent, BaseAIModel, BaseAISupervisor
-from haintech.ai.open_ai import OpenAIAgent
 
 
 def test_agent_with_session(ai_model: BaseAIModel):
     # Given: An agent with session
     session = AIChatSession()
-    ai_agent = OpenAIAgent(ai_model=ai_model, session=session)
+    ai_agent = BaseAIAgent(ai_model=ai_model, session=session)
     # And: The session is in progress
     response = ai_agent.get_text_response("Who was the first polish king?")
     assert "first" in response
     assert 1 == len(session.interactions)
     assert 2 == len(ai_agent.history)
     # When: A new agent is created with previous session
-    ai_agent = OpenAIAgent(session=session)
+    ai_agent = BaseAIAgent(ai_model=ai_model, session=session)
     # And: The agent is asked for answer
     response = ai_agent.get_text_response("Who was his father?")
     # Then: The answer is connected with previous session
