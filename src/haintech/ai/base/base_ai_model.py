@@ -44,7 +44,7 @@ class BaseAIModel(ABC):
     async def get_chat_response_async(
         self,
         message: Optional[AIModelInteractionMessage] = None,
-        prompt: Optional[AIPrompt] = None,
+        prompt: Optional[str| AIPrompt] = None,
         context: Optional[str | AIPrompt] = None,
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
         functions: Optional[Dict[Callable, Any]] = None,

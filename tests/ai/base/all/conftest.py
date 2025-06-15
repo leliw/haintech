@@ -7,6 +7,7 @@ from haintech.ai import (
     AIChatSession,
     BaseAIAgent,
     BaseAIChat,
+    BaseAIChatAsync,
     BaseAIModel,
     BaseAITextEmbeddingModel,
 )
@@ -40,6 +41,11 @@ def ai_embedding_model(request: pytest.FixtureRequest) -> BaseAITextEmbeddingMod
 @pytest.fixture
 def ai_chat(ai_model: BaseAIModel) -> BaseAIChat:
     return BaseAIChat(ai_model=ai_model)
+
+
+@pytest.fixture
+def ai_chat_async(ai_model: BaseAIModel) -> BaseAIChatAsync:
+    return BaseAIChatAsync(ai_model=ai_model)
 
 
 @pytest.fixture
@@ -77,6 +83,11 @@ def get_remaining_home_office_days(year: int):
 @pytest.fixture
 def ai_chat_with_session(ai_model: GoogleAIModel, session: AIChatSession) -> BaseAIChat:
     return BaseAIChat(ai_model=ai_model, session=session)
+
+
+@pytest.fixture
+def ai_chat_async_with_session(ai_model: GoogleAIModel, session: AIChatSession) -> BaseAIChatAsync:
+    return BaseAIChatAsync(ai_model=ai_model, session=session)
 
 
 class HRAgent(BaseAIAgent):
