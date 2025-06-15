@@ -1,12 +1,13 @@
 from typing import List
 
 from haintech.ai import AIChatSession, BaseRAGSearcher, RAGItem
+from haintech.ai.model import RAGQuery
 from haintech.ai.open_ai.open_ai_agent import OpenAIAgent
 
 
 class FileRAGSearcher(BaseRAGSearcher):
-    def search_sync(self, query: str) -> List[RAGItem]:
-        if "Who is a father of two?" == query:
+    def search_sync(self, query: RAGQuery) -> List[RAGItem]:
+        if "Who is a father of two?" == query.text:
             return [
                 RAGItem(
                     title="Ferdynand Kiepski",
@@ -36,4 +37,6 @@ def test_agent_one_question():
     assert "Ferdynand" in response
     # And: RAG item is in interaction
     li =session.get_last_interaction()
+    assert li and li.prompt and li.prompt.documents
+    assert 1 == len(li.prompt.documents)
     assert "Ferdynand Kiepski" == li.prompt.documents[0].title

@@ -4,11 +4,12 @@ from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, overrid
 from haintech.ai.ai_task_executor import AITaskExecutor
 
 from ..model import (
+    AIAgentSession,
     AIChatResponse,
     AIModelInteractionMessage,
-    AIModelSession,
     AIPrompt,
     AITask,
+    RAGQuery,
 )
 from .base_ai_chat import BaseAIChat
 from .base_ai_model import BaseAIModel
@@ -22,12 +23,12 @@ class BaseAIAgent(BaseAIChat):
 
     def __init__(
         self,
+        ai_model: BaseAIModel,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        ai_model: Optional[BaseAIModel] = None,
         prompt: Optional[AIPrompt] = None,
         context: Optional[str] = None,
-        session: Optional[AIModelSession] = None,
+        session: Optional[AIAgentSession] = None,
         searcher: Optional[BaseRAGSearcher] = None,
         functions: Optional[List[Callable]] = None,
     ):
@@ -144,7 +145,7 @@ class BaseAIAgent(BaseAIChat):
         #
         return resp
 
-    def iter_tool_calls(self) -> Iterator[Tuple[str, str, Dict[str, Any]]]:
+    def iter_tool_calls(self) -> Iterator[Tuple[str | None, str, Dict[str, Any]]]:
         """Iterate over tool calls from last response
 
         Returns:
@@ -155,7 +156,7 @@ class BaseAIAgent(BaseAIChat):
             for tool_call in last_response.tool_calls:
                 yield (tool_call.id, tool_call.function_name, tool_call.arguments)
 
-    def get_last_response(self) -> AIChatResponse:
+    def get_last_response(self) -> AIChatResponse | None:
         return self.session.get_last_response()
 
     def call_function(self, tool_call_id: str, name: str, **arguments) -> Any:
@@ -185,10 +186,13 @@ class BaseAIAgent(BaseAIChat):
             if self.searcher:
                 if len(msg) > 15:
                     self._log.debug("Searching for: %s", msg)
-                    self.rag_items = self.searcher.search_sync(msg)
+                    self.rag_items = list(self.searcher.search_sync(RAGQuery(text=msg)))
                     self._log.debug("Found: %d items", len(self.rag_items))
                 # When message is too short, do not search, just use last search results
-                for item in self.rag_items:
-                    self._log.debug("Item: %s", item.title)
-                ret.documents += self.rag_items
+                if isinstance(ret, AIPrompt):
+                    for item in self.rag_items:
+                        self._log.debug("Item: %s", item.title)
+                    if ret.documents is None:
+                        ret.documents = []
+                    ret.documents += self.rag_items
         return ret

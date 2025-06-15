@@ -10,6 +10,7 @@ from haintech.ai.model import (
     AIChatSession,
     AIModelInteraction,
     AIModelInteractionMessage,
+    AIModelSession,
     AIPrompt,
 )
 
@@ -25,7 +26,7 @@ class BaseAIChat(ABC):
         self,
         ai_model: BaseAIModel,
         context: Optional[str | AIPrompt] = None,
-        session: Optional[AIChatSession] = None,
+        session: Optional[AIModelSession] = None,
     ) -> None:
         """Base AIChat
 
@@ -39,13 +40,12 @@ class BaseAIChat(ABC):
         """
         self.ai_model = ai_model
         self.context = context
-        self.session = session
+        self.session = session or AIChatSession()
         self.history: List[AIModelInteractionMessage] = []
         self._interaction_logger = None
-        if session:
-            self.set_session(session)
+        self.set_session(self.session)
 
-    def set_session(self, session: AIChatSession):
+    def set_session(self, session: AIModelSession):
         self.session = session
         self._interaction_logger = session.add_interaction if session else None
 
