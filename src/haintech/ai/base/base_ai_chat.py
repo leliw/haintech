@@ -7,9 +7,9 @@ from typing import Callable, Iterator, List, Literal, Optional, TypeAlias
 from haintech.ai.base.base_ai_model import BaseAIModel
 from haintech.ai.model import (
     AIChatResponse,
+    AIChatSession,
     AIModelInteraction,
     AIModelInteractionMessage,
-    AIModelSession,
     AIPrompt,
 )
 
@@ -25,7 +25,7 @@ class BaseAIChat(ABC):
         self,
         ai_model: BaseAIModel,
         context: Optional[str | AIPrompt] = None,
-        session: Optional[AIModelSession] = None,
+        session: Optional[AIChatSession] = None,
     ) -> None:
         """Base AIChat
 
@@ -45,7 +45,7 @@ class BaseAIChat(ABC):
         if session:
             self.set_session(session)
 
-    def set_session(self, session: AIModelSession):
+    def set_session(self, session: AIChatSession):
         self.session = session
         self._interaction_logger = session.add_interaction if session else None
 
@@ -141,7 +141,10 @@ class BaseAIChat(ABC):
         return m_resp
 
     def get_text_response(self, message: Optional[str] = None) -> str:
-        return self.get_response(message).content
+        ret = self.get_response(message).content
+        if not ret:
+            raise ValueError("No content in response")
+        return ret
 
     def get_json_response(self, message: Optional[str] = None) -> str:
         i_msg = (
@@ -154,7 +157,10 @@ class BaseAIChat(ABC):
             self.add_message(i_msg)
         self.add_response_message(m_resp)
         try:
-            return json.loads(m_resp.content.strip())
+            ret_json = m_resp.content
+            if not ret_json:
+                raise ValueError("No content in response")
+            return json.loads(ret_json.strip())
         except json.JSONDecodeError as e:
             self._log.warning(e)
             self._log.warning("JSON content: %s", m_resp.content)
