@@ -1,6 +1,8 @@
 from .base import (
     BaseAIAgent,
+    BaseAIAgentAsync,
     BaseAIChat,
+    BaseAIChatAsync,
     BaseAIModel,
     BaseAISupervisor,
     BaseRAGSearcher,
@@ -22,6 +24,7 @@ from .model import (
     RAGQuery,
 )
 from .ai_task_executor import AITaskExecutor
+from .mcp_ai_agent import MCPAIAgent
 
 __all__ = [
     "AIChatResponse",
@@ -39,7 +42,9 @@ __all__ = [
     "RAGQuery",
     "BaseAIModel",
     "BaseAIChat",
+    "BaseAIChatAsync",
     "BaseAIAgent",
+    "BaseAIAgentAsync",
     "BaseAISupervisor",
     "BaseAITextEmbeddingModel",
     "BaseRAGSearcher",
@@ -47,4 +52,5 @@ __all__ = [
     "AIFunctionParameter",
     "AITask",
     "AITaskExecutor",
+    "MCPAIAgent",
 ]

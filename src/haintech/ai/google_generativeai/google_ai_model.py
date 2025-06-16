@@ -1,16 +1,11 @@
 import logging
 from itertools import chain
-from typing import Callable, Dict, Iterator, Literal, override
+from typing import Any, Callable, Dict, Iterable, Literal, Optional, override
 
-from google.generativeai import (
-    GenerationConfig,
-    GenerativeModel,
-    protos,
-)
-from google.generativeai import (
-    configure as genai_configure,
-)
-from google.generativeai.types import generation_types
+from google.generativeai import protos
+from google.generativeai.client import configure as genai_configure
+from google.generativeai.generative_models import GenerativeModel
+from google.generativeai.types import GenerationConfig, generation_types
 
 from haintech.ai.model import AIChatResponseToolCall, AIFunction, AIPrompt, RAGItem
 
@@ -30,8 +25,8 @@ class GoogleAIModel(BaseAIModel):
     def __init__(
         self,
         model_name: str = "gemini-1.5-flash",
-        parameters: GenerationConfig = None,
-        api_key: str = None,
+        parameters: Optional[GenerationConfig] = None,
+        api_key: Optional[str] = None,
     ):
         if api_key:
             genai_configure(api_key=api_key)
@@ -41,12 +36,12 @@ class GoogleAIModel(BaseAIModel):
     @override
     def get_chat_response(
         self,
-        message: str | AIModelInteractionMessage = None,
-        prompt: AIPrompt = None,
-        context: str | AIPrompt = None,
-        history: Iterator[AIModelInteractionMessage] = None,
-        functions: Dict[Callable, protos.FunctionDeclaration] = None,
-        interaction_logger: Callable[[AIModelInteraction], None] = None,
+        message: Optional[AIModelInteractionMessage] = None,
+        prompt: Optional[str | AIPrompt] = None,
+        context: Optional[str | AIPrompt] = None,
+        history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        functions: Optional[Dict[Callable, Any]] = None,
+        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         history = history or []
@@ -70,9 +65,7 @@ class GoogleAIModel(BaseAIModel):
             # system_instruction=context,
         )
         generation_config = GenerationConfig(
-            response_mime_type="text/plain"
-            if response_format == "text"
-            else "application/json"
+            response_mime_type="text/plain" if response_format == "text" else "application/json"
         )
         chat = model.start_chat(history=msg_list)
         native_response = chat.send_message(
@@ -123,9 +116,7 @@ class GoogleAIModel(BaseAIModel):
         return ret
 
     @classmethod
-    def _create_content_from_message(
-        cls, i_message: AIModelInteractionMessage
-    ) -> protos.Content:
+    def _create_content_from_message(cls, i_message: AIModelInteractionMessage) -> protos.Content:
         """Converts AIModelInteractionMessage to protos.Content required by Google
 
         Args:
@@ -144,9 +135,7 @@ class GoogleAIModel(BaseAIModel):
         )
 
     @classmethod
-    def _create_content_from_function_response(
-        cls, i_message: AIModelInteractionMessage
-    ) -> protos.Content:
+    def _create_content_from_function_response(cls, i_message: AIModelInteractionMessage) -> protos.Content:
         """Converts AIModelInteractionMessage with tool call result to protos.Content
 
         Args:
@@ -167,37 +156,27 @@ class GoogleAIModel(BaseAIModel):
         )
 
     @classmethod
-    def _create_parts_from_tool_calls(
-        cls, i_message: AIModelInteractionMessage
-    ) -> Iterator[protos.Part]:
+    def _create_parts_from_tool_calls(cls, i_message: AIModelInteractionMessage) -> Iterable[protos.Part]:
         """Converts AIModelInteractionMessage with tool call to protos.Part
 
         Args:
             i_message: AIModelInteractionMessage
         Returns:
-            Iterator[protos.Part]
+            Iterable[protos.Part]
         """
         if not i_message.tool_calls:
             return []
         return (
-            protos.Part(
-                function_call=protos.FunctionCall(
-                    name=tc.function_name, args=tc.arguments
-                )
-            )
+            protos.Part(function_call=protos.FunctionCall(name=tc.function_name, args=tc.arguments))
             for tc in i_message.tool_calls
         )
 
     @classmethod
     @override
-    def model_function_definition(
-        cls, ai_function: AIFunction
-    ) -> protos.FunctionDeclaration:
+    def model_function_definition(cls, ai_function: AIFunction) -> protos.FunctionDeclaration:
         parameters = protos.Schema(type=protos.Type.OBJECT, properties={}, required=[])
         for param in ai_function.parameters:
-            parameters.properties[param.name] = protos.Schema(
-                type=protos.Type.STRING, description=param.description
-            )
+            parameters.properties[param.name] = protos.Schema(type=protos.Type.STRING, description=param.description)
             if param.required:
                 parameters.required.append(param.name)
         return protos.FunctionDeclaration(
@@ -207,9 +186,7 @@ class GoogleAIModel(BaseAIModel):
         )
 
     @classmethod
-    def _create_response_from_content_response(
-        cls, n_resp: generation_types.GenerateContentResponse
-    ) -> AIChatResponse:
+    def _create_response_from_content_response(cls, n_resp: generation_types.GenerateContentResponse) -> AIChatResponse:
         """Converts protos.GenerateContentResponse to AIChatResponse
 
         Args:
@@ -234,3 +211,47 @@ class GoogleAIModel(BaseAIModel):
             content="\n".join(texts) or None,
             tool_calls=tool_calls or None,
         )
+
+    try:
+        from agents.mcp import MCPServer
+        from mcp import Tool as MCPTool
+
+        def prepare_mcp_tool_definition(self, tool: MCPTool) -> protos.FunctionDeclaration:
+            """Creates a FunctionDefinition from an MCP Tool.
+
+            It can be overriden if other models expect different definition
+
+            Args:
+                tool: The MCP Tool to create the FunctionDefinition from.
+            Returns:
+                A FunctionDefinition object representing the tool.
+            """
+            parameters = protos.Schema(type=protos.Type.OBJECT, properties={}, required=[])
+            for param_name, param in tool.inputSchema["properties"].items():
+                match param["type"]:
+                    case "integer":
+                        type = protos.Type.INTEGER
+                    case "boolean":
+                        type = protos.Type.BOOLEAN
+                    case _:
+                        type = protos.Type.STRING
+                parameters.properties[param_name] = protos.Schema(type=type)
+            parameters.required = tool.inputSchema["required"]
+            return protos.FunctionDeclaration(
+                name=tool.name,
+                description=tool.description,
+                parameters=parameters,
+            )
+
+            # return {
+            #     "name": tool.name,
+            #     "description": tool.description,
+            #     "parameters": {
+            #         "type": "object",
+            #         "properties": ,
+            #         "required": tool.inputSchema["required"],
+            #     },
+            # }
+
+    except ImportError:
+        pass

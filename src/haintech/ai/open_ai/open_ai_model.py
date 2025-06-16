@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Callable, Dict, Iterator, Literal, override
+from typing import Any, Callable, Dict, Iterable, Literal, Optional, override
 
 from openai import AsyncOpenAI, OpenAI
 from openai.types.chat import (
@@ -29,7 +29,7 @@ class OpenAIModel(BaseAIModel):
     def __init__(
         self,
         model_name: str = "gpt-4o-mini",
-        parameters: OpenAIParameters | Dict[str, str | int | float] = None,
+        parameters: Optional[OpenAIParameters | Dict[str, Any]] = None,
     ):
         self.openai = OpenAI()
         self.async_openai = AsyncOpenAI()
@@ -41,12 +41,12 @@ class OpenAIModel(BaseAIModel):
     @override
     def get_chat_response(
         self,
-        message: str | AIModelInteractionMessage = None,
-        prompt: AIPrompt = None,
-        context: str | AIPrompt = None,
-        history: Iterator[AIModelInteractionMessage] = None,
-        functions: Dict[str, FunctionDefinition] = None,
-        interaction_logger: Callable[[AIModelInteraction], None] = None,
+        message: Optional[AIModelInteractionMessage] = None,
+        prompt: Optional[str | AIPrompt] = None,
+        context: Optional[str | AIPrompt] = None,
+        history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        functions: Optional[Dict[Callable, Any]] = None,
+        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         if not isinstance(history, list):
@@ -61,6 +61,7 @@ class OpenAIModel(BaseAIModel):
         except Exception as e:
             self._log.error("Error: %s", e)
             response = AIChatResponse(content=str(e))
+            return response
         finally:
             if interaction_logger:
                 ai_model_interaction.response = response
@@ -69,12 +70,12 @@ class OpenAIModel(BaseAIModel):
     @override
     async def get_chat_response_async(
         self,
-        message: str | AIModelInteractionMessage = None,
-        prompt: AIPrompt = None,
-        context: str | AIPrompt = None,
-        history: Iterator[AIModelInteractionMessage] = None,
-        functions: Dict[str, FunctionDefinition] = None,
-        interaction_logger: Callable[[AIModelInteraction], None] = None,
+        message: Optional[str | AIModelInteractionMessage] = None,
+        prompt: Optional[AIPrompt] = None,
+        context: Optional[str | AIPrompt] = None,
+        history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        functions: Optional[Dict[str, FunctionDefinition]] = None,
+        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         if not isinstance(history, list):
@@ -89,6 +90,7 @@ class OpenAIModel(BaseAIModel):
         except Exception as e:
             self._log.error("Error: %s", e)
             response = AIChatResponse(content=str(e))
+            return response
         finally:
             if interaction_logger:
                 ai_model_interaction.response = response
@@ -96,14 +98,14 @@ class OpenAIModel(BaseAIModel):
 
     def _prepare_parameters(
         self,
-        history: Iterator[AIModelInteractionMessage] = None,
-        prompt: AIPrompt = None,
-        context: str | AIPrompt = None,
-        message: str | AIModelInteractionMessage = None,
-        functions: Dict[str, FunctionDefinition] = None,
+        history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        prompt: Optional[AIPrompt] = None,
+        context: Optional[str | AIPrompt] = None,
+        message: Optional[str | AIModelInteractionMessage] = None,
+        functions: Optional[Dict[str, FunctionDefinition]] = None,
         response_format: Literal["text", "json"] = "text",
     ):
-        msg_list = [self._create_message(m) for m in history]
+        msg_list = [self._create_message(m) for m in history or []]
         if prompt:
             context = self._prompt_to_str(prompt)
         else:
