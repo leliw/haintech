@@ -26,6 +26,9 @@ huggingface = [
 anthropic = [
     "anthropic>=0.52.2",
 ]
+mcp = [
+    "openai-agents>=0.0.17",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -34,6 +37,9 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "anthropic>=0.53.0",
+    "httpx>=0.28.1",
+    "mcp[cli]>=1.9.4",
+    "openai-agents>=0.0.17",
     "pytest>=8.3.5",
     "pytest-asyncio>=0.25.3",
     "pytest-cov>=6.1.1",

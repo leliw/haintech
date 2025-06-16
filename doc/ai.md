@@ -1,20 +1,18 @@
-# AI package
+# AI Package
 
-Implementations of `BaseAIModel`:
+Implementations of `BaseAIModel` include:
 
 * OpenAIModel()
 * GoogleAIModel()
 * DeepSeekAIModel()
 
-## Model classes
+## Model Classes
 
 ### AIPrompt
 
-Structured prompt for AI model.
-Each AI model implementation can process this structure
-in its own way.
+Structured prompt for AI model. Each AI model implementation can process this structure differently.
 
- According to: <https://cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/prompt-design-strategies#components-of-a-prompt>
+For more information, refer to: <https://cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/prompt-design-strategies#components-of-a-prompt>
 
 * persona
 * objective
@@ -28,25 +26,21 @@ in its own way.
 
 ### AIModelInteraction
 
-Represents one interaction with AIModel.
-It can be used fro debugging and costs calculations.
+Represents one interaction with AIModel. It can be used for debugging and cost calculations.
 
 ### AIModelSession
 
-It is abstract class used by `BaseAIChat` to store
-chat session history. There are only mabstract methods.
+It is an abstract class used by `BaseAIChat` to store chat session history. It contains only abstract methods.
 
-* add_interaction(self, interaction: AIModelInteraction) -> None:
-  adds next iteraction with AI model (usually with a response)
-* messages_iterator(self) -> Iterator[AIModelInteractionMessage]:
-  returns chat session history as iterator of messages
-* get_last_response(self) -> Optional[AIChatResponse]:
-  returns last response from AI model
+* `add_interaction(self, interaction: AIModelInteraction) -> None:` adds the next interaction with the AI model (usually with a response).
+* `messages_iterator(self) -> Iterator[AIModelInteractionMessage]:` returns the chat session history as an iterator of messages.
+* `get_last_response(self) -> Optional[AIChatResponse]:` returns the last response from the AI model.
 
-## Utility classes
+## Utility Classes
 
 * BaseAIModel
-* BaseAIChat
-* BaseAIAgent
-* [AITaskExecutor](ai/ai_task_executor.md) - wraps an AI model that it can be used like a function
-* [BaseAITextEmbeddingModel](ai/text_embedding_model.md) - wraps an AI model that can be used for text embedding
+* BaseAIChat / BaseAIChatAsync
+* BaseAIAgent / BaseAIAgentAsync
+* [AITaskExecutor](ai/ai_task_executor.md) - wraps an AI model so it can be used like a function.
+* [BaseAITextEmbeddingModel](ai/text_embedding_model.md) - wraps an AI model that can be used for text embedding.
+* [MCPAIAgent](ai/mcp_ai_agent.md) - BaseAIAgentAsync that allows the use of MCP servers.

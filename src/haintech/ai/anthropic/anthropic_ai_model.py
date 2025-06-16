@@ -1,4 +1,3 @@
-import json
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, override
 
@@ -128,7 +127,6 @@ class AnthropicAIModel(BaseAIModel):
         ai_model_interaction = AIModelInteraction(
             model=self.model_name,
             message=message,
-            prompt=prompt,
             context=context if not prompt else None,
             history=history,
             tools=[
@@ -137,7 +135,7 @@ class AnthropicAIModel(BaseAIModel):
             response_format=response_format_param,
         )
         system_prompt = (
-            self._prompt_to_str(prompt) if prompt else self._prompt_to_str(context)
+            self._prompt_to_str(prompt) if prompt else self._prompt_to_str(context) if context else None
         )
         return (
             {
@@ -237,3 +235,32 @@ class AnthropicAIModel(BaseAIModel):
             "description": ai_function.description,
             "input_schema": parameters,
         }
+
+    try:
+        from agents.mcp import MCPServer
+        from mcp import Tool as MCPTool
+
+        def prepare_mcp_tool_definition(self, tool: MCPTool) -> Dict[str, Any]:
+            """Creates a FunctionDefinition from an MCP Tool.
+
+            It can be overriden if other models expect different definition
+
+            Args:
+                tool: The MCP Tool to create the FunctionDefinition from.
+            Returns:
+                A FunctionDefinition object representing the tool.
+            """
+            if tool.inputSchema is None:
+                raise ValueError(f"Tool {tool.name} has no inputSchema")
+            return {
+                "name": tool.name,
+                "description": tool.description,
+                "input_schema": {
+                    "type": "object",
+                    "properties": tool.inputSchema["properties"],
+                    "required": tool.inputSchema["required"],
+                },
+            }
+
+    except ImportError:
+        pass

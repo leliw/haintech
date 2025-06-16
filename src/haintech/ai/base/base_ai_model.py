@@ -44,7 +44,7 @@ class BaseAIModel(ABC):
     async def get_chat_response_async(
         self,
         message: Optional[AIModelInteractionMessage] = None,
-        prompt: Optional[str| AIPrompt] = None,
+        prompt: Optional[str | AIPrompt] = None,
         context: Optional[str | AIPrompt] = None,
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
         functions: Optional[Dict[Callable, Any]] = None,
@@ -228,3 +228,30 @@ class BaseAIModel(ABC):
             parameters=parameters,
             return_type=return_type,
         )
+
+    try:
+        from agents.mcp import MCPServer
+        from mcp import Tool as MCPTool
+
+        def prepare_mcp_tool_definition(self, tool: MCPTool) -> Dict[str, Any]:
+            """Creates a FunctionDefinition from an MCP Tool.
+
+            It can be overriden if other models expect different definition
+
+            Args:
+                tool: The MCP Tool to create the FunctionDefinition from.
+            Returns:
+                A FunctionDefinition object representing the tool.
+            """
+            return {
+                "name": tool.name,
+                "description": tool.description,
+                "parameters": {
+                    "type": "object",
+                    "properties": tool.inputSchema["properties"],
+                    "required": tool.inputSchema["required"],
+                },
+            }
+
+    except ImportError:
+        pass
