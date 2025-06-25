@@ -13,7 +13,7 @@ from openai.types.shared_params import FunctionDefinition
 from ..base import BaseAIModel
 from ..model import (
     AIChatResponse,
-    AIChatResponseToolCall,
+    AIModelToolCall,
     AIModelInteraction,
     AIModelInteractionMessage,
     AIPrompt,
@@ -190,7 +190,7 @@ class OpenAIModel(BaseAIModel):
     def _create_ai_chat_response(cls, m_resp: ChatCompletionMessage) -> AIChatResponse:
         if m_resp.tool_calls:
             tool_calls = [
-                AIChatResponseToolCall(
+                AIModelToolCall(
                     id=tool_call.id,
                     function_name=tool_call.function.name,
                     arguments=json.loads(tool_call.function.arguments),

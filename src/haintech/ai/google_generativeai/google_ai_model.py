@@ -7,7 +7,7 @@ from google.generativeai.client import configure as genai_configure
 from google.generativeai.generative_models import GenerativeModel
 from google.generativeai.types import GenerationConfig, generation_types
 
-from haintech.ai.model import AIChatResponseToolCall, AIFunction, AIPrompt, RAGItem
+from haintech.ai.model import AIModelToolCall, AIFunction, AIPrompt, RAGItem
 
 from ..base import BaseAIModel
 from ..model import (
@@ -199,7 +199,7 @@ class GoogleAIModel(BaseAIModel):
         for part in n_resp.parts:
             if part.function_call:
                 tool_calls.append(
-                    AIChatResponseToolCall(
+                    AIModelToolCall(
                         id=part.function_call.name,
                         function_name=part.function_call.name,
                         arguments=dict(part.function_call.args),

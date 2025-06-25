@@ -11,7 +11,7 @@ from haintech.ai import (
     AIPrompt,
     BaseAIModel,
 )
-from haintech.ai.model import AIChatResponseToolCall, AIFunction, AIModelInteractionTool
+from haintech.ai.model import AIModelToolCall, AIFunction, AIModelInteractionTool
 
 
 class AnthropicAIModel(BaseAIModel):
@@ -201,7 +201,7 @@ class AnthropicAIModel(BaseAIModel):
                 content = m_resp["text"]
             elif "id" in m_resp and "name" in m_resp and "input" in m_resp:
                 tool_calls.append(
-                    AIChatResponseToolCall(
+                    AIModelToolCall(
                         id=m_resp["id"],
                         function_name=m_resp["name"],
                         arguments=m_resp["input"],

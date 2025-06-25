@@ -30,15 +30,15 @@ class RAGItem(BaseModel):
     )
 
 
-class AIModelInteractionMessageToolCall(BaseModel):
+class AIModelToolCall(BaseModel):
     """Tool call request returned by AIModel"""
 
     id: Optional[str] = None
     function_name: str
     arguments: Dict[str, Any]
 
-    def __str__(self) -> str:
-        return f"{self.id}: {self.function_name}({self.arguments})"
+    def __str__(self):
+        return f"{self.id}: {self.function_name}({', '.join([f'{k}="{v}"' for k, v in self.arguments.items()])})"
 
 
 class AIModelInteractionMessage(BaseModel):
@@ -48,7 +48,7 @@ class AIModelInteractionMessage(BaseModel):
     name: Optional[str] = None
     tool_call_id: Optional[str] = None  # Only for role=tool
     content: Optional[str] = None
-    tool_calls: Optional[List[AIModelInteractionMessageToolCall]] = None
+    tool_calls: Optional[List[AIModelToolCall]] = None
 
     def __str__(self) -> str:
         ret = f"{self.role:10}:" + (f" {self.tool_call_id} => " if self.tool_call_id else "")
@@ -64,29 +64,14 @@ class AIModelInteractionMessage(BaseModel):
         return ret
 
 
-class AIChatResponseToolCall(BaseModel):
-    """Chat response tool call model."""
-
-    id: Optional[str] = None
-    function_name: str
-    arguments: Dict[str, Any]
-
-    def __str__(self):
-        return f"{self.id}: {self.function_name}({', '.join([f'{k}="{v}"' for k, v in self.arguments.items()])})"
-
-
 class AIChatResponse(BaseModel):
     """Chat response model."""
 
     content: Optional[str] = None
-    tool_calls: Optional[List[AIChatResponseToolCall]] = None
+    tool_calls: Optional[List[AIModelToolCall]] = None
 
     def toMessage(self) -> AIModelInteractionMessage:
-        tool_calls = []
-        if self.tool_calls:
-            for t in self.tool_calls:
-                tool_calls.append(AIModelInteractionMessageToolCall(**t.model_dump()))
-        return AIModelInteractionMessage(role="assistant", content=self.content, tool_calls=tool_calls)
+        return AIModelInteractionMessage(role="assistant", content=self.content, tool_calls=self.tool_calls)
 
     def __str__(self) -> str:
         ret = []
@@ -210,7 +195,7 @@ class AISupervisorSession(BaseModel, AIModelSession):
 
     uid: str = Field(default_factory=lambda: uuid.uuid4().hex)
     datetime: str = Field(default_factory=lambda: str(datetime.now()))
-    interactions: List[Tuple[str|None, AIModelInteraction]] = Field(default_factory=list)
+    interactions: List[Tuple[str | None, AIModelInteraction]] = Field(default_factory=list)
     agent_name: Optional[str] = None
 
     def create_agent_session(self, agent_name: str) -> AIModelSession:
@@ -261,7 +246,7 @@ class AIAgentSession(AIModelSession):
     with the agent name differentiator.
     """
 
-    def __init__(self, agent_name: str, interactions: List[Tuple[str|None, AIModelInteraction]]):
+    def __init__(self, agent_name: str, interactions: List[Tuple[str | None, AIModelInteraction]]):
         self.agent_name = agent_name
         self.interactions = interactions
 

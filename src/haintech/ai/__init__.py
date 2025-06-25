@@ -10,13 +10,13 @@ from .base import (
 )
 from .model import (
     AIChatResponse,
-    AIChatResponseToolCall,
     AIChatSession,
     AIFunction,
     AIFunctionParameter,
     AIModelInteraction,
     AIModelInteractionMessage,
     AIModelSession,
+    AIModelToolCall,
     AIPrompt,
     AISupervisorSession,
     AITask,
@@ -24,11 +24,10 @@ from .model import (
     RAGQuery,
 )
 from .ai_task_executor import AITaskExecutor
-from .mcp_ai_agent import MCPAIAgent
 
 __all__ = [
     "AIChatResponse",
-    "AIChatResponseToolCall",
+    "AIModelToolCall",
     "AIChatSession",
     "AIModelInteraction",
     "AIModelInteractionMessage",
@@ -52,5 +51,4 @@ __all__ = [
     "AIFunctionParameter",
     "AITask",
     "AITaskExecutor",
-    "MCPAIAgent",
 ]
