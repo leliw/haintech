@@ -8,7 +8,7 @@ class LambdaProcessor[I, O](BaseProcessor):
 
     def __init__(
         self,
-        expression: Callable[[I], O],
+        expression: Callable[[I], O | None],
         name: str = None,
         input: FieldNameOrLambda = None,
         output: FieldNameOrLambda = None,

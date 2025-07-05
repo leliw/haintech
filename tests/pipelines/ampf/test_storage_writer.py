@@ -1,3 +1,4 @@
+from typing import Self
 import pytest
 from ampf.base import CollectionDef
 from ampf.in_memory import InMemoryFactory
@@ -94,7 +95,7 @@ async def test_pipe_divided_into_steps(factory, data):
             LambdaProcessor[D, D](lambda d: setattr(d, "page_no", 2)),
             StorageWriter(storage),
             LambdaProcessor[D, D](lambda d: setattr(d, "content", "2")),
-        ]
+        ]  # type: ignore
     )
     # And: Two steps are taken
     pl0 = pl.get_step(0)
@@ -104,6 +105,7 @@ async def test_pipe_divided_into_steps(factory, data):
     # And: Run second step with sotrage keys
     ret = await pl1.run_and_return(storage.keys())
     # Then: Both steps were executed
+    assert isinstance(ret, list)
     assert ret[0].page_no == 2
     assert ret[0].content == "2"
 
@@ -121,16 +123,14 @@ async def test_lambda_storage(factory_l, data):
 
     class D(BaseModel):
         name: str
-        _c: C = None
+        _c: C = None  # type: ignore
 
-        def set_c(self, c: C) -> C:
+        def set_c(self, c: C) -> Self:
             self._c = c
             return self
 
     # And: Storage collection for the classes
-    storage = factory_l.create_collection(
-        CollectionDef("cs", C, "name", subcollections=[CollectionDef("ds", D)])
-    )
+    storage = factory_l.create_collection(CollectionDef("cs", C, "name", subcollections=[CollectionDef("ds", D)]))
     # And: Pipeline with two writers, first "normal" and second - lambda expression
     pl = Pipeline(
         [
@@ -138,14 +138,14 @@ async def test_lambda_storage(factory_l, data):
             StorageWriter[C](storage),
             LambdaProcessor[C, D](lambda c: D(name=c.name).set_c(c)),
             LogProcessor(message="{name}"),
-            StorageWriter[D](lambda d: storage.get_collection(d._c.name, "ds")),
-        ]
+            StorageWriter[D](lambda d: storage.get_collection(d._c.name, "ds")),  # type: ignore
+        ]  # type: ignore
     )
     # When: Run pipeline
     ret = await pl.run_and_return("xxx")
     # Then: Returns D object (with _c property)
     assert isinstance(ret, D)
-    ret._c = None
+    ret._c = None  # type: ignore
     assert ret == D(name="xxx")
     # And: Data is stored
     storage_d = storage.get_collection("xxx", "ds")
@@ -153,6 +153,25 @@ async def test_lambda_storage(factory_l, data):
     assert len(keys) == 1
     assert storage_d.get(keys[0]) == D(name="xxx")
 
+
+@pytest.mark.asyncio
+async def test_changed_only(factory, data):
+    # STEP: 1
+    # Given: Storage with key_name
+    storage = factory.create_storage("test3", D, "content")
+    # And: Pipeline with StorageWriter with changed_only set true
+    pl = Pipeline([StorageWriter[D](storage, changed_only=True)])
+    # When: Run pipeline with data
+    ret = await pl.run_and_return(data)
+    # Then: Data is returned
+    assert ret == data
+    # STEP: 2
+    # Given: Second item
+    data2 = D(page_no=2, content="2")
+    # When: Run pipeline with data and data2
+    ret = await pl.run_and_return([data, data2])
+    # Then: Only data2 is returned
+    assert ret == [data2]
 
 if __name__ == "__main__":
     pytest.main([__file__])
