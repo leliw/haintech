@@ -26,7 +26,7 @@ For more information, refer to: <https://cloud.google.com/vertex-ai/generative-a
 
 ### AIModelInteraction
 
-Represents one interaction with AIModel. It can be used for debugging and cost calculations.
+Represents one whole interaction with AIModel. It can be used for debugging and cost calculations.
 
 ### AIModelSession
 

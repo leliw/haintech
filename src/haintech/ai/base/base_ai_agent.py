@@ -140,9 +140,6 @@ class BaseAIAgent(BaseAIChat):
                 #     )
                 # )
         resp = self.get_response()
-        #
-        self.add_response_message(resp)
-        #
         return resp
 
     def iter_tool_calls(self) -> Iterator[Tuple[str | None, str, Dict[str, Any]]]:

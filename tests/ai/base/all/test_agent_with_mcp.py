@@ -9,8 +9,8 @@ from agents.mcp import MCPServer, MCPServerStdio
 from haintech.ai import (
     AIChatSession,
     BaseAIModel,
-    MCPAIAgent,
 )
+from haintech.ai.mcp_ai_agent import MCPAIAgent
 from haintech.ai.open_ai.open_ai_model import OpenAIModel
 
 
@@ -50,8 +50,8 @@ class HRAgent(MCPAIAgent):
 async def test(mcp_server):
     ai_model = OpenAIModel()
     async with MCPAIAgent(ai_model=ai_model, mcp_servers=[mcp_server]) as agent:
-        tools = await mcp_server.list_tools()
-        assert len(tools) == 11
+        tools = await mcp_server.list_tools(None, None)
+        assert len(tools) == 12
         response = await agent.get_text_response("Ile plików jest w katalogu tests/data/samples? Podaj liczbę.")
         assert "1" in response
 
@@ -96,5 +96,20 @@ async def test_agent_without_context(ai_model: BaseAIModel, hr_mcp_server):
         await ai_agent.define_mcp_servers()
         # When: I ask agent
         response = await ai_agent.get_text_response("How many vacation days do I have left in 2025?")
+    # Then: I should get answer
+    assert "26" in response
+
+
+@pytest.mark.asyncio
+async def test_agent_and_mcp_server_without_context(ai_model: BaseAIModel, hr_mcp_server):
+    logging.getLogger("haintech").setLevel(logging.DEBUG)
+    # Given: A mcp server context
+    await hr_mcp_server.connect()
+    # And: An agent with mcp server
+    ai_agent = HRAgent(ai_model=ai_model, mcp_servers=[hr_mcp_server])
+    await ai_agent.define_mcp_servers()
+    # When: I ask agent
+    response = await ai_agent.get_text_response("How many vacation days do I have left in 2025?")
+    await hr_mcp_server.cleanup()
     # Then: I should get answer
     assert "26" in response
