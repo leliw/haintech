@@ -1,4 +1,5 @@
 import logging
+import re
 from itertools import chain
 from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, override
 
@@ -147,12 +148,20 @@ class GoogleAIModel(BaseAIModel):
         Returns:
             protos.Content
         """
+        tool_call_id = i_message.tool_call_id
+        if tool_call_id:
+            # Jeśli kończy się na __liczba, wydziel nazwę
+            match = re.match(r"^(.*)__\d+$", tool_call_id)
+            name = match.group(1) if match else tool_call_id
+        else:
+            name = None
         return protos.Content(
             role="user",
             parts=[
                 protos.Part(
                     function_response=protos.FunctionResponse(
-                        name=i_message.tool_call_id,
+                        id=tool_call_id,
+                        name=name,
                         response={"response": i_message.content},
                     )
                 )
@@ -200,13 +209,24 @@ class GoogleAIModel(BaseAIModel):
         """
         tool_calls = []
         texts = []
+        name_indices = {}
         for part in n_resp.parts:
             if part.function_call:
+                fc = part.function_call
+                name = fc.name
+                # If id is provided, use it
+                if fc.id:
+                    tool_id = fc.id
+                # If not, use name and add numbering
+                else:
+                    idx = name_indices.get(name, 1)
+                    tool_id = f"{name}__{idx}"
+                    name_indices[name] = idx + 1
                 tool_calls.append(
                     AIModelToolCall(
-                        id=part.function_call.name,
-                        function_name=part.function_call.name,
-                        arguments=dict(part.function_call.args),
+                        id=tool_id,
+                        function_name=name,
+                        arguments=dict(fc.args),
                     )
                 )
             if part.text:
