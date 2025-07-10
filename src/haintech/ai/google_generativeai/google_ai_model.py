@@ -1,7 +1,8 @@
 import logging
 from itertools import chain
-from typing import Any, Callable, Dict, Iterable, Literal, Optional, override
+from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, override
 
+import google.generativeai as genai
 from google.generativeai import protos
 from google.generativeai.client import configure as genai_configure
 from google.generativeai.generative_models import GenerativeModel
@@ -32,6 +33,9 @@ class GoogleAIModel(BaseAIModel):
             genai_configure(api_key=api_key)
         self.model_name = model_name
         self.parameters = parameters
+
+    def get_model_names(self) -> List[str]:
+        return [m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods]  # type: ignore
 
     @override
     def get_chat_response(
