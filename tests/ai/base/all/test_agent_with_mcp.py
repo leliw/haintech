@@ -51,7 +51,7 @@ async def test(mcp_server):
     ai_model = OpenAIModel()
     async with MCPAIAgent(ai_model=ai_model, mcp_servers=[mcp_server]) as agent:
         tools = await mcp_server.list_tools(None, None)
-        assert len(tools) == 12
+        assert len(tools) == 14
         response = await agent.get_text_response("Ile plików jest w katalogu tests/data/samples? Podaj liczbę.")
         assert "1" in response
 
