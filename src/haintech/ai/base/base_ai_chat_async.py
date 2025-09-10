@@ -54,9 +54,6 @@ class BaseAIChatAsync(ABC):
             for message in self.session.messages_iterator():
                 if message.role != "system":
                     self.add_message(message)
-            response = self.session.get_last_response()
-            if response:
-                self.add_response_message(response)
 
     async def _get_response(
         self,
@@ -100,7 +97,7 @@ class BaseAIChatAsync(ABC):
         Args:
             response: response
         """
-        self.add_message(response.toMessage())
+        self.add_message(self.session.create_message_from_response(response))
 
     def iter_messages(self) -> Iterator[AIModelInteractionMessage]:
         """Iterates over all messages

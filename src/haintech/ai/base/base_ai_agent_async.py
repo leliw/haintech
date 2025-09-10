@@ -91,7 +91,7 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         )
         return response
 
-    async def get_response(self, message: Optional[str] = None) -> AIChatResponse:
+    async def get_response(self, message: Optional[AIModelInteractionMessage | str] = None) -> AIChatResponse:
         """Get response from LLM
 
         Args:
@@ -99,12 +99,13 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         Returns:
             response: LLM response
         """
-        i_msg = AIModelInteractionMessage(role="user", content=message) if message else None
+        if isinstance(message, str):
+            message = AIModelInteractionMessage(role="user", content=message)
         # Call LLM
-        m_resp = await self._get_response(message=i_msg)
+        m_resp = await self._get_response(message=message)
         # Add message and response to history
-        if i_msg:
-            self.add_message(i_msg)
+        if message:
+            self.add_message(message)
         self.add_response_message(m_resp)
         return m_resp
 

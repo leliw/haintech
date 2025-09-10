@@ -41,6 +41,22 @@ class AIModelToolCall(BaseModel):
         return f"{self.id}: {self.function_name}({', '.join([f'{k}="{v}"' for k, v in self.arguments.items()])})"
 
 
+class AIChatResponse(BaseModel):
+    """Chat response model."""
+
+    content: Optional[str] = None
+    tool_calls: Optional[List[AIModelToolCall]] = None
+
+    def __str__(self) -> str:
+        ret = []
+        if self.content:
+            ret.append(f"Assistant: {self.content}")
+        if self.tool_calls:
+            for tc in self.tool_calls:
+                ret.append(str(tc))
+        return "\n".join(ret)
+
+
 class AIModelInteractionMessage(BaseModel):
     """One message within AIModelInteraction"""
 
@@ -49,6 +65,14 @@ class AIModelInteractionMessage(BaseModel):
     tool_call_id: Optional[str] = None  # Only for role=tool
     content: Optional[str] = None
     tool_calls: Optional[List[AIModelToolCall]] = None
+
+    @classmethod
+    def create_from_response(cls, response: AIChatResponse):
+        return cls(
+            role="assistant",
+            content=response.content,
+            tool_calls=response.tool_calls,
+        )
 
     def __str__(self) -> str:
         ret = f"{self.role:10}:" + (f" {self.tool_call_id} => " if self.tool_call_id else "")
@@ -62,25 +86,6 @@ class AIModelInteractionMessage(BaseModel):
                 ret += f"{' ' if i == 0 else '\n'}{tc}"
 
         return ret
-
-
-class AIChatResponse(BaseModel):
-    """Chat response model."""
-
-    content: Optional[str] = None
-    tool_calls: Optional[List[AIModelToolCall]] = None
-
-    def toMessage(self) -> AIModelInteractionMessage:
-        return AIModelInteractionMessage(role="assistant", content=self.content, tool_calls=self.tool_calls)
-
-    def __str__(self) -> str:
-        ret = []
-        if self.content:
-            ret.append(f"Assistant: {self.content}")
-        if self.tool_calls:
-            for tc in self.tool_calls:
-                ret.append(str(tc))
-        return "\n".join(ret)
 
 
 class AIModelInteractionTool(BaseModel):
@@ -105,7 +110,7 @@ class AIPrompt(BaseModel):
     recap: Optional[str] = None
 
 
-class AIModelInteraction(BaseModel):
+class AIModelInteraction[T: AIModelInteractionMessage](BaseModel):
     """One interaction with AIModel"""
 
     uid: str = Field(default_factory=lambda: uuid.uuid4().hex)
@@ -115,21 +120,21 @@ class AIModelInteraction(BaseModel):
     response_format: Optional[Dict[str, str]] = None
     context: Optional[str] = None
     prompt: Optional[AIPrompt] = None
-    history: List[AIModelInteractionMessage]
-    message: Optional[AIModelInteractionMessage] = None
+    history: List[T]
+    message: Optional[T] = None
     response: Optional[AIChatResponse] = None
 
 
-class AIModelSession(ABC):
+class AIModelSession[T: AIModelInteractionMessage](ABC):
     """AIModel session model."""
 
     @abstractmethod
-    def add_interaction(self, interaction: AIModelInteraction) -> None:
+    def add_interaction(self, interaction: AIModelInteraction[T]) -> None:
         """Add interaction to session."""
         pass
 
     @abstractmethod
-    def messages_iterator(self) -> Iterator[AIModelInteractionMessage]:
+    def messages_iterator(self) -> Iterator[T]:
         """Itrerates over all messages (from last interaction)."""
         pass
 
@@ -138,16 +143,20 @@ class AIModelSession(ABC):
         """Get last response (from last interaction)."""
         pass
 
+    @classmethod
+    def create_message_from_response(cls, response: AIChatResponse) -> T:
+        return AIModelInteractionMessage.create_from_response(response) # type: ignore
 
-class AIChatSession(BaseModel, AIModelSession):
+
+class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
     """Chat session model."""
 
     uid: str = Field(default_factory=lambda: uuid.uuid4().hex)
     datetime: str = Field(default_factory=lambda: str(datetime.now()))
-    interactions: List[AIModelInteraction] = Field(default_factory=list)
+    interactions: List[AIModelInteraction[T]] = Field(default_factory=list)
 
     @override
-    def add_interaction(self, interaction: AIModelInteraction):
+    def add_interaction(self, interaction: AIModelInteraction[T]):
         self.interactions.append(interaction)
 
     @override
@@ -159,7 +168,7 @@ class AIChatSession(BaseModel, AIModelSession):
         return None
 
     @override
-    def messages_iterator(self) -> Iterator[AIModelInteractionMessage]:
+    def messages_iterator(self) -> Iterator[T]:
         """Itrerates over all messages (from last interaction)"""
         last_interaction = self.get_last_interaction()
         if last_interaction:
@@ -167,14 +176,19 @@ class AIChatSession(BaseModel, AIModelSession):
                 yield message
             if last_interaction.message:
                 yield last_interaction.message
+                clazz = last_interaction.message.__class__
+                last_response = self.get_last_response()
+                if last_response:
+                    yield clazz.create_from_response(last_response)
 
-    def get_last_interaction(self) -> Optional[AIModelInteraction]:
+
+    def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
         """Get last interaction."""
         if self.interactions:
             return self.interactions[-1]
         return None
 
-    def add_message(self, message: AIModelInteractionMessage):
+    def add_message(self, message: T):
         """Add message to last interaction."""
         last_interaction = self.get_last_interaction()
         if last_interaction:
@@ -184,26 +198,28 @@ class AIChatSession(BaseModel, AIModelSession):
         ret = ""
         for m in self.messages_iterator():
             ret += str(m) + "\n"
-        last_response = self.get_last_response()
-        if last_response:
-            ret += str(last_response.toMessage()) + "\n"
+        if m:
+            clazz = m.__class__
+            last_response = self.get_last_response()
+            if last_response:
+                ret += str(clazz.create_from_response(last_response)) + "\n"
         return ret
 
 
-class AISupervisorSession(BaseModel, AIModelSession):
+class AISupervisorSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
     """Supervisor session model. It can create agent sessions."""
 
     uid: str = Field(default_factory=lambda: uuid.uuid4().hex)
     datetime: str = Field(default_factory=lambda: str(datetime.now()))
-    interactions: List[Tuple[str | None, AIModelInteraction]] = Field(default_factory=list)
+    interactions: List[Tuple[str | None, AIModelInteraction[T]]] = Field(default_factory=list)
     agent_name: Optional[str] = None
 
-    def create_agent_session(self, agent_name: str) -> AIModelSession:
+    def create_agent_session(self, agent_name: str) -> AIModelSession[T]:
         """Create agent session."""
         return AIAgentSession(agent_name=agent_name, interactions=self.interactions)
 
     @override
-    def add_interaction(self, interaction: AIModelInteraction):
+    def add_interaction(self, interaction: AIModelInteraction[T]):
         self.interactions.append((self.agent_name, interaction))
 
     @override
@@ -216,7 +232,7 @@ class AISupervisorSession(BaseModel, AIModelSession):
         return None
 
     @override
-    def messages_iterator(self) -> Iterator[AIModelInteractionMessage]:
+    def messages_iterator(self) -> Iterator[T]:
         """Itrerates over all messages (from last interaction)"""
         if self.interactions:
             for agent_name, interaction in reversed(self.interactions):
@@ -232,13 +248,15 @@ class AISupervisorSession(BaseModel, AIModelSession):
         ret = ""
         for m in self.messages_iterator():
             ret += str(m) + "\n"
-        last_response = self.get_last_response()
-        if last_response:
-            ret += str(last_response.toMessage()) + "\n"
+        if m:
+            clazz = m.__class__
+            last_response = self.get_last_response()
+            if last_response:
+                ret += str(clazz.create_from_response(last_response)) + "\n"
         return ret
 
 
-class AIAgentSession(AIModelSession):
+class AIAgentSession[T: AIModelInteractionMessage](AIModelSession[T]):
     """Agent session model.
 
     It links to supervisor session.
@@ -246,12 +264,12 @@ class AIAgentSession(AIModelSession):
     with the agent name differentiator.
     """
 
-    def __init__(self, agent_name: str, interactions: List[Tuple[str | None, AIModelInteraction]]):
+    def __init__(self, agent_name: str, interactions: List[Tuple[str | None, AIModelInteraction[T]]]):
         self.agent_name = agent_name
         self.interactions = interactions
 
     @override
-    def add_interaction(self, interaction: AIModelInteraction):
+    def add_interaction(self, interaction: AIModelInteraction[T]):
         self.interactions.append((self.agent_name, interaction))
 
     @override
@@ -264,7 +282,7 @@ class AIAgentSession(AIModelSession):
         return None
 
     @override
-    def messages_iterator(self) -> Iterator[AIModelInteractionMessage]:
+    def messages_iterator(self) -> Iterator[T]:
         """Itrerates over all messages (from last interaction)"""
         if self.interactions:
             for agent_name, interaction in reversed(self.interactions):
