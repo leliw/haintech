@@ -4,5 +4,6 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "workbench.colorTheme": "Monokai"
+    "workbench.preferredLightColorTheme": "Solarized Light",
+    "workbench.preferredDarkColorTheme": "Solarized Dark"
 }

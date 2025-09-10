@@ -1,9 +1,9 @@
 from typing import Callable, Optional, override
 
-from ampf.base import BaseBlobAsyncStorage, Blob
+from ampf.base import Blob, BaseAsyncBlobStorage
 from pydantic import BaseModel
 
-from ..base_processor import BaseProcessor, FieldNameOrLambda
+from ..base_processor import BaseProcessor, FieldNameOrLambda, FieldNameOrLambda2
 from ..progress_tracker import ProgressTracker
 
 
@@ -12,11 +12,11 @@ class BlobStorageWriter[M: BaseModel](BaseProcessor[Blob[M], Blob[M]]):
 
     def __init__(
         self,
-        storage: BaseBlobAsyncStorage[M] | Callable[[Blob[M]], BaseBlobAsyncStorage[M]],
+        storage: BaseAsyncBlobStorage[M] | Callable[[Blob[M]], BaseAsyncBlobStorage[M]],
         progress_tracker: Optional[ProgressTracker] = None,
         name: Optional[str] = None,
         input: Optional[FieldNameOrLambda] = None,
-        output: Optional[FieldNameOrLambda] = None,
+        output: Optional[FieldNameOrLambda2] = None,
     ):
         super().__init__(name, input, output)
         self.storage = storage

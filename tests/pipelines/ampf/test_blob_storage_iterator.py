@@ -20,12 +20,12 @@ class D(BaseModel):
 
 @pytest.fixture
 def data1():
-    return Blob[D](key="1", data=b"1", metadata=D(page_no="1", content="test"))
+    return Blob[D](name="1", data=b"1", metadata=D(page_no="1", content="test"))
 
 
 @pytest.fixture
 def data2():
-    return Blob[D](key="2", data=b"2", metadata=D(page_no="2", content="test"))
+    return Blob[D](name="2", data=b"2", metadata=D(page_no="2", content="test"))
 
 
 @pytest.mark.asyncio
@@ -42,6 +42,7 @@ async def test_blob_iterator(factory, data1, data2):
     )
     # When: Run pipeline without any data
     ret = await pl.run_and_return(None)
+    assert ret
     ret.sort(key=lambda x: x.metadata.page_no)
     # Then: Returns all blobs from storage
     assert ret == [data1, data2]
@@ -64,6 +65,7 @@ async def test_iterator_with_progress_tracker(factory, data1, data2):
     )
     # When: Run pipeline without any data
     ret = await pl.run_and_return(None)
+    assert ret
     ret.sort(key=lambda x: x.metadata.page_no)
     # Then: Returns all blobs from storage
     assert ret == [data1, data2]
@@ -90,6 +92,7 @@ async def test_lambda_storage(factory, data1, data2):
     )
     # When: Run pipeline with argument "X"
     ret = await pl.run_and_return(["X"])
+    assert ret
     ret.sort(key=lambda x: x.metadata.page_no)
     # Then: Returns all blobs from storage "X" directory
     assert ret == [data1, data2]

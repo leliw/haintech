@@ -1,6 +1,6 @@
 from typing import AsyncIterator, Callable, Iterator, Optional, override
 
-from ampf.base import BaseBlobAsyncStorage, Blob
+from ampf.base import BaseAsyncBlobStorage, Blob
 from pydantic import BaseModel
 
 from ..base_flat_map_processor import BaseProcessor
@@ -10,7 +10,7 @@ from ..progress_tracker import ProgressTracker
 class BlobStorageIterator[I, M: BaseModel](BaseProcessor[I, Blob[M]]):
     def __init__(
         self,
-        storage: BaseBlobAsyncStorage[M] | Callable[[I], BaseBlobAsyncStorage[M]],
+        storage: BaseAsyncBlobStorage[M] | Callable[[I], BaseAsyncBlobStorage[M]],
         progress_tracker: Optional[ProgressTracker] = None,
         name=None,
         input=None,
@@ -53,7 +53,7 @@ class BlobStorageIterator[I, M: BaseModel](BaseProcessor[I, Blob[M]]):
         if self.progress_tracker:
             self.progress_tracker.set_total_steps(len(blob_headers))
         for header in blob_headers:
-            item = await storage.download_async(header.key)
+            item = await storage.download_async(header.name)
             if self.progress_tracker:
                 self.progress_tracker.increment()
             yield self._put_output_data(data, item)
