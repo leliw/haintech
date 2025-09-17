@@ -1,5 +1,5 @@
 import pytest
-from ampf.base import CollectionDef, Blob
+from ampf.base import Blob
 from ampf.local_async import AsyncLocalFactory
 from pydantic import BaseModel
 
