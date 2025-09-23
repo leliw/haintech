@@ -56,15 +56,32 @@ class BaseAIAgent(BaseAIChat):
         self.rag_items = []
 
     def add_function(self, function: Callable, name: Optional[str] = None, definition: Any = None) -> None:
+        """Add function to agent
+
+        Args:
+            function: function to add
+            name: name of the function
+            definition: function definition
+        """
         name = name or function.__name__
         definition = definition or self.ai_model.prepare_function_definition(function, name=name)
         self.functions[function] = definition
         self.function_names[name] = function
 
     def add_rag_searcher(self, searcher: BaseRAGSearcher):
+        """Add RAG searcher to agent
+
+        Args:
+            searcher: RAG searcher
+        """
         self.searcher = searcher
 
     def add_ai_task(self, ai_task: AITask) -> None:
+        """Add AI task to agent
+
+        Args:
+            ai_task: AI task
+        """
         definition = self.ai_model.model_function_definition(ai_task)
         function = AITaskExecutor.create_from_definition(self.ai_model, ai_task).execute
         self.functions[function] = definition

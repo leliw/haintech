@@ -2,7 +2,7 @@ import json
 import logging
 from abc import ABC
 from pathlib import Path
-from typing import Callable, Iterator, List, Literal, Optional, TypeAlias
+from typing import Any, Callable, Iterator, List, Literal, Optional, TypeAlias
 
 from haintech.ai.base.base_ai_model import BaseAIModel
 from haintech.ai.model import (
@@ -126,6 +126,13 @@ class BaseAIChat(ABC):
         self._interaction_logger = logger
 
     def get_response(self, message: Optional[str] = None) -> AIChatResponse:
+        """Get response from LLM
+
+        Args:
+            message: message to send to LLM
+        Returns:
+            response: LLM response
+        """
         i_msg = AIModelInteractionMessage(role="user", content=message) if message else None
         # Call LLM
         m_resp = self._get_response(message=i_msg)
@@ -136,12 +143,26 @@ class BaseAIChat(ABC):
         return m_resp
 
     def get_text_response(self, message: Optional[str] = None) -> str:
+        """Get text response from LLM
+
+        Args:
+            message: message to send to LLM
+        Returns:
+            response: LLM response
+        """
         ret = self.get_response(message).content
         if not ret:
             raise ValueError("No content in response")
         return ret
 
-    def get_json_response(self, message: Optional[str] = None) -> str:
+    def get_json_response(self, message: Optional[str] = None) -> Any:
+        """Get JSON response from LLM
+
+        Args:
+            message: message to send to LLM
+        Returns:
+            response: LLM response as JSON
+        """
         i_msg = AIModelInteractionMessage(role="user", content=message) if message else None
         # Call LLM
         m_resp = self._get_response(message=i_msg, response_format="json")
