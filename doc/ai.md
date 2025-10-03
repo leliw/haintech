@@ -38,9 +38,9 @@ It is an abstract class used by `BaseAIChat` to store chat session history. It c
 
 ## Utility Classes
 
-* BaseAIModel
-* BaseAIChat / BaseAIChatAsync
-* BaseAIAgent / BaseAIAgentAsync
+* [BaseAIModel](ai_base_ai_model.md) - base class for AI models.
+* [BaseAIChat / BaseAIChatAsync](ai_base_ai_chat.md) - base class for chat models.
+* [BaseAIAgent / BaseAIAgentAsync](ai_base_ai_agent.md) - base class for agent models.
 * [AITaskExecutor](ai/ai_task_executor.md) - wraps an AI model so it can be used like a function.
 * [BaseAITextEmbeddingModel](ai/text_embedding_model.md) - wraps an AI model that can be used for text embedding.
 * [MCPAIAgent](ai/mcp_ai_agent.md) - BaseAIAgentAsync that allows the use of MCP servers.
