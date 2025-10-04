@@ -17,7 +17,7 @@ class AITaskExecutor:
     def __init__(
         self,
         ai_model: BaseAIModel,
-        system_instructions: AIPrompt,
+        system_instructions: AIPrompt | str,
         prompt: str,
         response_format: Literal["text", "json"] = "text",
     ):
@@ -44,7 +44,7 @@ class AITaskExecutor:
         m_resp = self.ai_model.get_chat_response(
             system_prompt=self.system_instructions,
             message=self._prepare_message(**kwargs),
-            response_format=self.response_format,
+            response_format=self.response_format, # type: ignore
         )
         return self._prepare_response(m_resp)
 
@@ -59,15 +59,16 @@ class AITaskExecutor:
         m_resp = await self.ai_model.get_chat_response_async(
             system_prompt=self.system_instructions,
             message=self._prepare_message(**kwargs),
-            response_format=self.response_format,
+            response_format=self.response_format, # type: ignore
         )
         return self._prepare_response(m_resp)
 
     def _prepare_message(self, **kwargs) -> AIModelInteractionMessage:
         message = self.prompt.format(**kwargs)
-        return (
-            AIModelInteractionMessage(role="user", content=message) if message else None
-        )
+        if message:
+            return AIModelInteractionMessage(role="user", content=message)
+        else:
+            raise ValueError("Prompt is empty")
     
     def _prepare_response(self, m_resp) -> str | Dict | List:
         if self.response_format == "json":
