@@ -69,7 +69,7 @@ class BaseAIChat(ABC):
         """
         response = self.ai_model.get_chat_response(
             message=message,
-            prompt=self._get_prompt(),
+            system_prompt=self._get_prompt(),
             history=self.iter_messages(),
             interaction_logger=self._interaction_logger,
             response_format=response_format,

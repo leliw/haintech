@@ -14,6 +14,7 @@ from haintech.ai.model import AIModelToolCall, AIFunction, AIPrompt, RAGItem
 from ..base import BaseAIModel
 from ..model import (
     AIChatResponse,
+    AIContext,
     AIModelInteraction,
     AIModelInteractionMessage,
 )
@@ -41,10 +42,10 @@ class GoogleAIModel(BaseAIModel):
     @override
     def get_chat_response(
         self,
-        message: Optional[AIModelInteractionMessage] = None,
-        prompt: Optional[str | AIPrompt] = None,
-        context: Optional[str | AIPrompt] = None,
+        system_prompt: Optional[str | AIPrompt] = None,
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        context: Optional[AIContext] = None,
+        message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
@@ -57,16 +58,16 @@ class GoogleAIModel(BaseAIModel):
         elif isinstance(message, str):
             message = AIModelInteractionMessage(role="user", content=message)
         msg_list = (self._create_content_from_message(m) for m in history)
-        if prompt:
-            context = self._prompt_to_str(prompt)
-        else:
-            context = self._prompt_to_str(context) if context else None
+        if system_prompt:
+            msg = AIModelInteractionMessage(role="system", content=self._prompt_to_str(system_prompt))
+            msg_list = chain([self._create_content_from_message(msg)], msg_list)
         if context:
-            msg_ctx = AIModelInteractionMessage(role="system", content=context)
-            msg_list = chain([self._create_content_from_message(msg_ctx)], msg_list)
+            msg = AIModelInteractionMessage(role="system", content=self._context_to_str(context))
+            msg_list = chain(msg_list, [self._create_content_from_message(msg)])
+
         model = GenerativeModel(
             model_name=self.model_name,
-            generation_config=self.parameters, # type: ignore
+            generation_config=self.parameters,  # type: ignore
             # system_instruction=context,
         )
         generation_config = GenerationConfig(
@@ -119,6 +120,7 @@ class GoogleAIModel(BaseAIModel):
         if prompt.recap:
             ret += f"<RECAP>\n{prompt.recap}\n</RECAP>\n"
         return ret
+
 
     @classmethod
     def _create_content_from_message(cls, i_message: AIModelInteractionMessage) -> protos.Content:

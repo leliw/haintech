@@ -42,7 +42,7 @@ class AITaskExecutor:
             str: AI Model response.
         """
         m_resp = self.ai_model.get_chat_response(
-            prompt=self.system_instructions,
+            system_prompt=self.system_instructions,
             message=self._prepare_message(**kwargs),
             response_format=self.response_format,
         )
@@ -57,7 +57,7 @@ class AITaskExecutor:
             str: AI Model response.
         """
         m_resp = await self.ai_model.get_chat_response_async(
-            prompt=self.system_instructions,
+            system_prompt=self.system_instructions,
             message=self._prepare_message(**kwargs),
             response_format=self.response_format,
         )

@@ -101,7 +101,7 @@ class BaseAIAgent(BaseAIChat):
         """
         response = self.ai_model.get_chat_response(
             message=message,
-            prompt=self._get_prompt(),
+            system_prompt=self._get_prompt(),
             history=self.iter_messages(),
             functions=self.functions,
             interaction_logger=self._interaction_logger,

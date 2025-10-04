@@ -28,8 +28,7 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         ai_model: BaseAIModel,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        prompt: Optional[AIPrompt] = None,
-        context: Optional[str] = None,
+        system_prompt: Optional[AIPrompt] = None,
         session: Optional[AIModelSession] = None,
         searcher: Optional[BaseRAGSearcher] = None,
         functions: Optional[List[Callable]] = None,
@@ -46,7 +45,7 @@ class BaseAIAgentAsync(BaseAIChatAsync):
             searcher: RAG searcher
             functions: list of functions to add
         """
-        super().__init__(ai_model, prompt or context, session)
+        super().__init__(ai_model, system_prompt, session)
         self.name = name or self.__class__.__name__
         self.description = description
         self.searcher = searcher
@@ -86,7 +85,7 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         history = list(self.iter_messages())
         response = await self.ai_model.get_chat_response_async(
             message=message,
-            prompt=self._get_prompt(),
+            system_prompt=self._get_prompt(),
             history=history,
             functions=self.functions,
             interaction_logger=self._interaction_logger,

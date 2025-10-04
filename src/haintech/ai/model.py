@@ -19,6 +19,8 @@ class RAGQuery(BaseModel):
 class RAGItem(BaseModel):
     item_id: Optional[str] = None
     title: Optional[str] = None
+    url: Optional[str] = None
+    description: Optional[str] = None
     keywords: Optional[List[str]] = Field(
         default_factory=list,
         description="List of keywords associated with the item.",
@@ -112,7 +114,7 @@ class AIPrompt(BaseModel):
 
 class AIContext(BaseModel):
     context: Optional[str] = None
-    documents: List[str | RAGItem]
+    documents: List[str | RAGItem] = Field(default_factory=list)
 
 
 class AIModelInteraction[T: AIModelInteractionMessage](BaseModel):
@@ -123,7 +125,7 @@ class AIModelInteraction[T: AIModelInteractionMessage](BaseModel):
     tools: Optional[List[AIModelInteractionTool]] = None
     parallel_tool_calls: Optional[bool] = None
     response_format: Optional[Dict[str, str]] = None
-    context: Optional[str] = None
+    context: Optional[AIContext] = None
     prompt: Optional[AIPrompt] = None
     history: List[T]
     message: Optional[T] = None
