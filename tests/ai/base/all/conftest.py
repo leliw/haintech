@@ -10,7 +10,6 @@ from haintech.ai import (
     BaseAIChatAsync,
     BaseAIModel,
     BaseAITextEmbeddingModel,
-    AIPrompt,
 )
 from haintech.ai.anthropic import AnthropicAIModel
 from haintech.ai.deep_seek.deep_seek_ai_model import DeepSeekAIModel
@@ -21,6 +20,7 @@ from haintech.ai.open_ai import OpenAIModel, OpenAITextEmbeddingModel
 
 @pytest.fixture(
     params=[OpenAIModel, GoogleAIModel, DeepSeekAIModel, AnthropicAIModel],
+    #params=[GoogleAIModel],
     scope="session",
 )
 def ai_model(request: pytest.FixtureRequest) -> BaseAIModel:
