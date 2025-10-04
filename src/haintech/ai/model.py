@@ -110,6 +110,11 @@ class AIPrompt(BaseModel):
     recap: Optional[str] = None
 
 
+class AIContext(BaseModel):
+    context: Optional[str] = None
+    documents: List[str | RAGItem]
+
+
 class AIModelInteraction[T: AIModelInteractionMessage](BaseModel):
     """One interaction with AIModel"""
 
@@ -145,7 +150,7 @@ class AIModelSession[T: AIModelInteractionMessage](ABC):
 
     @classmethod
     def create_message_from_response(cls, response: AIChatResponse) -> T:
-        return AIModelInteractionMessage.create_from_response(response) # type: ignore
+        return AIModelInteractionMessage.create_from_response(response)  # type: ignore
 
 
 class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
@@ -180,7 +185,6 @@ class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
                 last_response = self.get_last_response()
                 if last_response:
                     yield clazz.create_from_response(last_response)
-
 
     def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
         """Get last interaction."""

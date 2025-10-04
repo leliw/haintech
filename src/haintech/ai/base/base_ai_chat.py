@@ -25,7 +25,7 @@ class BaseAIChat(ABC):
     def __init__(
         self,
         ai_model: BaseAIModel,
-        context: Optional[str | AIPrompt] = None,
+        system_prompt: Optional[str | AIPrompt] = None,
         session: Optional[AIModelSession] = None,
     ) -> None:
         """Base AIChat
@@ -39,7 +39,7 @@ class BaseAIChat(ABC):
             session: current session object,
         """
         self.ai_model = ai_model
-        self.context = context
+        self.system_prompt = system_prompt
         self.session = session or AIChatSession()
         self.history: List[AIModelInteractionMessage] = []
         self._interaction_logger = None
@@ -69,7 +69,7 @@ class BaseAIChat(ABC):
         """
         response = self.ai_model.get_chat_response(
             message=message,
-            prompt=self._get_context(message),
+            prompt=self._get_prompt(),
             history=self.iter_messages(),
             interaction_logger=self._interaction_logger,
             response_format=response_format,
@@ -108,19 +108,15 @@ class BaseAIChat(ABC):
         for message in self.history:
             yield message
 
-    def _get_context(self, message: Optional[AIModelInteractionMessage] = None) -> str | AIPrompt | None:
-        """Returns context for LLM (self.context).
+    def _get_prompt(self) -> str | AIPrompt | None:
+        """Returns system prompt for LLM (self.system_prompt).
 
-        It can be overriden to return dynamic context.
-
-        Args:
-            message: message
-        Returns:
-            context: context
+        It can be overriden to return dynamic prompt.
         """
-        if self.context and isinstance(self.context, AIPrompt):
-            return self.context
-        return AIPrompt(context=self.context) if self.context else None
+
+        if self.system_prompt and isinstance(self.system_prompt, AIPrompt):
+            return self.system_prompt
+        return AIPrompt(context=self.system_prompt) if self.system_prompt else None
 
     def set_interaction_logger(self, logger: Callable[[AIModelInteraction], None]):
         self._interaction_logger = logger

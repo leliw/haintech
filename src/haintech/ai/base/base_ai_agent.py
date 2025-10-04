@@ -1,10 +1,11 @@
 import logging
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, override
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
 from haintech.ai.ai_task_executor import AITaskExecutor
 
 from ..model import (
     AIChatResponse,
+    AIContext,
     AIModelInteractionMessage,
     AIModelSession,
     AIPrompt,
@@ -100,7 +101,7 @@ class BaseAIAgent(BaseAIChat):
         """
         response = self.ai_model.get_chat_response(
             message=message,
-            prompt=self._get_context(message),
+            prompt=self._get_prompt(),
             history=self.iter_messages(),
             functions=self.functions,
             interaction_logger=self._interaction_logger,
@@ -193,9 +194,8 @@ class BaseAIAgent(BaseAIChat):
     def add_tool_message(self, tool_call_id: str, content: str):
         self.add_message(AIModelInteractionMessage(role="tool", tool_call_id=tool_call_id, content=content))
 
-    @override
-    def _get_context(self, message: Optional[AIModelInteractionMessage] = None) -> str | AIPrompt:
-        ret = super()._get_context(message) or AIPrompt()
+    def _get_context(self, message: Optional[AIModelInteractionMessage] = None) -> AIContext:
+        ret = AIContext(documents=[])
         if message and message.content:
             msg = message.content
             if self.searcher:
