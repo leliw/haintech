@@ -47,10 +47,13 @@ def test_agent_with_ai_task(ai_model: BaseAIModel, session):
     )
     # Then: I shult get function call
     print(response)
+    assert response.tool_calls
     assert 1 == len(response.tool_calls)
     # STEP: 2
     # =======
     # When: I accept function call
+    assert response.tool_calls[0].id
     response = ai_agent.accept_tools(response.tool_calls[0].id)
     # Then: I should get answer
+    assert response.content
     assert "users" in response.content

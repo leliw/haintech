@@ -11,7 +11,7 @@ from haintech.ai import (
     AIPrompt,
     BaseAIModel,
 )
-from haintech.ai.model import AIModelToolCall, AIFunction, AIModelInteractionTool
+from haintech.ai.model import AIContext, AIModelToolCall, AIFunction, AIModelInteractionTool
 
 
 class AnthropicAIModel(BaseAIModel):
@@ -41,16 +41,17 @@ class AnthropicAIModel(BaseAIModel):
     @override
     def get_chat_response(
         self,
-        message: Optional[AIModelInteractionMessage] = None,
-        prompt: Optional[str | AIPrompt] = None,
-        context: Optional[str | AIPrompt] = None,
+        system_prompt: Optional[str | AIPrompt] = None,
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        context: Optional[AIContext] = None,
+        message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
+
     ) -> AIChatResponse:
         parameters, ai_model_interaction = self._prepare_parameters(
-            message, prompt, context, history, functions, response_format
+            system_prompt, history, context, message, functions, response_format
         )
         try:
             resp: anthropic.types.Message = self.client.messages.create(**parameters)
@@ -66,16 +67,17 @@ class AnthropicAIModel(BaseAIModel):
     @override
     async def get_chat_response_async(
         self,
-        message: Optional[AIModelInteractionMessage] = None,
-        prompt: Optional[str | AIPrompt] = None,
-        context: Optional[str | AIPrompt] = None,
+        system_prompt: Optional[str | AIPrompt] = None,
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        context: Optional[AIContext] = None,
+        message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
+
     ) -> AIChatResponse:
         parameters, ai_model_interaction = self._prepare_parameters(
-            message, prompt, context, history, functions, response_format
+            system_prompt, history, context, message, functions, response_format
         )
         try:
             resp: anthropic.types.Message = await self.async_client.messages.create(
@@ -92,28 +94,26 @@ class AnthropicAIModel(BaseAIModel):
 
     def _prepare_parameters(
         self,
-        message: Optional[AIModelInteractionMessage] = None,
-        prompt: Optional[str | AIPrompt] = None,
-        context: Optional[str | AIPrompt] = None,
+        system_prompt: Optional[str | AIPrompt] = None,
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        context: Optional[AIContext] = None,
+        message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         response_format: Literal["text", "json"] = "text",
+
     ):
+        self._log.debug("Preparing parameters for Anthropic model")
         if not isinstance(history, list):
             history = list(history or [])
+        if not message:
+            if history:
+                message = history.pop()
+            else:
+                raise ValueError("No message provided")
         msg_list = [self._create_message(m) for m in history]
-        if prompt:
-            context = self._prompt_to_str(prompt)
-        else:
-            context = self._prompt_to_str(context) if context else None
-        if message:
-            if isinstance(message, str):
-                message = AIModelInteractionMessage(role="user", content=message)
-            msg_list.append(self._create_message(message))
-        elif history:
-            message = history.pop()
-        else:
-            raise ValueError("No message provided")
+        if isinstance(message, str):
+            message = AIModelInteractionMessage(role="user", content=message)
+        msg_list.append(self._create_message(message, context))
         tools = []
         if functions:
             for f in functions:
@@ -127,20 +127,19 @@ class AnthropicAIModel(BaseAIModel):
         ai_model_interaction = AIModelInteraction(
             model=self.model_name,
             message=message,
-            context=context if not prompt else None,
+            prompt=system_prompt,
+            context=context,
             history=history,
             tools=[
                 AIModelInteractionTool(type="function", function=tool) for tool in tools
             ],
             response_format=response_format_param,
         )
-        system_prompt = (
-            self._prompt_to_str(prompt) if prompt else self._prompt_to_str(context) if context else None
-        )
+        system = self._prompt_to_str(system_prompt) if isinstance(system_prompt, AIPrompt) else system_prompt
         return (
             {
                 "model": self.model_name,
-                "system": system_prompt or anthropic.NOT_GIVEN,
+                "system": system or anthropic.NOT_GIVEN,
                 "messages": msg_list,
                 "tools": tools,
             }
@@ -150,8 +149,13 @@ class AnthropicAIModel(BaseAIModel):
 
     @classmethod
     def _create_message(
-        cls, interaction_message: AIModelInteractionMessage
+        cls, interaction_message: AIModelInteractionMessage, context: Optional[AIContext] = None
     ) -> Dict[str, Any]:
+        
+        cls._log.debug("Creating message: %s", interaction_message)
+        if context:
+            cls._log.debug("With context: %s", context)    
+
         if interaction_message.tool_call_id:
             ret = {
                 "role": "user",
@@ -177,6 +181,13 @@ class AnthropicAIModel(BaseAIModel):
                         "text": interaction_message.content,
                     }
                 )
+            if context:
+                content.append(
+                    {
+                        "type": "text",
+                        "text": cls._context_to_str(context),
+                    }
+                )
             if interaction_message.tool_calls:
                 for t in interaction_message.tool_calls:
                     content.append(
@@ -188,7 +199,6 @@ class AnthropicAIModel(BaseAIModel):
                         }
                     )
             ret = {"role": role, "content": content}
-        cls._log.debug("Creating message: %s", interaction_message)
         return ret
 
     @classmethod

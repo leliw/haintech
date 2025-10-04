@@ -10,6 +10,7 @@ from haintech.ai import (
     BaseAIChatAsync,
     BaseAIModel,
     BaseAITextEmbeddingModel,
+    AIPrompt,
 )
 from haintech.ai.anthropic import AnthropicAIModel
 from haintech.ai.deep_seek.deep_seek_ai_model import DeepSeekAIModel
@@ -94,7 +95,7 @@ class HRAgent(BaseAIAgent):
     def __init__(self, ai_model: BaseAIModel, session: Optional[AIChatSession] = None):
         super().__init__(
             description="HR assistant. Answer prersonal information about HR, days off and vacation related question.",
-            context="You are a helpful HR assistant.",
+            system_prompt="You are a helpful HR assistant.",
             ai_model=ai_model,
             functions=[
                 get_remaining_vacation_days,

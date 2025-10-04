@@ -126,7 +126,7 @@ class AIModelInteraction[T: AIModelInteractionMessage](BaseModel):
     parallel_tool_calls: Optional[bool] = None
     response_format: Optional[Dict[str, str]] = None
     context: Optional[AIContext] = None
-    prompt: Optional[AIPrompt] = None
+    prompt: Optional[str | AIPrompt] = None
     history: List[T]
     message: Optional[T] = None
     response: Optional[AIChatResponse] = None
