@@ -84,9 +84,10 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         """
         history = list(self.iter_messages())
         response = await self.ai_model.get_chat_response_async(
-            message=message,
             system_prompt=self._get_prompt(),
             history=history,
+            context=await self._get_context(message),
+            message=message,
             functions=self.functions,
             interaction_logger=self._interaction_logger,
         )
@@ -181,14 +182,16 @@ class BaseAIAgentAsync(BaseAIChatAsync):
     def add_tool_message(self, tool_call_id: str, content: str):
         self.add_message(AIModelInteractionMessage(role="tool", tool_call_id=tool_call_id, content=content))
 
-    async def _get_context(self, message: Optional[AIModelInteractionMessage] = None) -> AIContext:
+    async def _get_context(self, message: Optional[AIModelInteractionMessage] = None) -> Optional[AIContext]:
+        if not self.searcher:
+            return None
         ret = AIContext(documents=[])
         if message and message.content:
             msg = message.content
             if self.searcher:
                 if len(msg) > 15:
                     self._log.debug("Searching for: %s", msg)
-                    self.rag_items = list(await self.searcher.search_async(RAGQuery(text=msg)))
+                    ret.documents = list(await self.searcher.search_async(RAGQuery(text=msg)))
                     self._log.debug("Found: %d items", len(self.rag_items))
                 # When message is too short, do not search, just use last search results
                 if isinstance(ret, AIPrompt):
