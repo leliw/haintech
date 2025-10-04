@@ -27,7 +27,7 @@ class BaseAIAgent(BaseAIChat):
         ai_model: BaseAIModel,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        system_prompt: Optional[AIPrompt] = None,
+        system_prompt: Optional[str | AIPrompt] = None,
         session: Optional[AIModelSession] = None,
         searcher: Optional[BaseRAGSearcher] = None,
         functions: Optional[List[Callable]] = None,
@@ -106,7 +106,6 @@ class BaseAIAgent(BaseAIChat):
             message=message,
             functions=self.functions,
             interaction_logger=self._interaction_logger,
-
         )
         return response
 

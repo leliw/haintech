@@ -11,7 +11,7 @@ def test_agent_with_ai_task(ai_model: BaseAIModel, session):
     # Given: AI Agent with AI Task
     ai_agent = BaseAIAgent(
         ai_model=ai_model,
-        context="Always use available tools. Don't invent yourself.",
+        system_prompt="Always use available tools. Don't invent yourself.",
         session=session,
     )
     td = AITask(

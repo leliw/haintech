@@ -116,7 +116,7 @@ class OpenAIModel(BaseAIModel):
         if system_prompt:
             msg_list.append(
                 self._create_message(
-                    AIModelInteractionMessage(role="developer", content=self._prompt_to_str(system_prompt))
+                    AIModelInteractionMessage(role="system", content=self._prompt_to_str(system_prompt))
                 )
             )
         for m in history:

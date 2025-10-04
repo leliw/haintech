@@ -16,18 +16,18 @@ def test_agents_collaboration(ai_model: BaseAIModel):
         ai_model=ai_model,
         name="Historian",
         description="Historian assistant. Answer any question about history.",
-        context="You are a helpful historian assistant.",
+        system_prompt="You are a helpful historian assistant.",
     )
     geo_agent = BaseAIAgent(
         ai_model=ai_model,
         name="Geographer",
         description="Geographer assistant. Answer any question about geography.",
-        context="You are a helpful geographer assistant.",
+        system_prompt="You are a helpful geographer assistant.",
     )
     man_session = AISupervisorSession()
     man_agent = BaseAISupervisor(
         ai_model=ai_model,
-        context="You are a helpful assistant.",
+        system_prompt="You are a helpful assistant.",
         agents=[hist_agent, geo_agent],
         session=man_session,
     )
@@ -54,7 +54,7 @@ def test_supervisor_with_acceptance(
     ai_supervisor = BaseAISupervisor(
         ai_model=ai_model,
         description="Company Assistant",
-        context="You are a helpful company assistant. Ask other agents if needed.",
+        system_prompt="You are a helpful company assistant. Ask other agents if needed.",
         agents=[hr_agent],
         session=tm_session,
     )
@@ -94,7 +94,7 @@ def test_supervisor_with_without_acceptance_agent_call(
     ai_supervisor = BaseAISupervisor(
         ai_model=ai_model,
         description="Company Assistant",
-        context="You are a helpful company assistant. Ask other agents if needed.",
+        system_prompt="You are a helpful company assistant. Ask other agents if needed.",
         agents=[hr_agent],
         session=tm_session,
     )
@@ -132,18 +132,18 @@ def test_agent_with_different_model(ai_model: BaseAIModel, agent_ai_model: BaseA
         ai_model=agent_ai_model,
         name="Historian",
         description="Historian assistant. Answer any question about history.",
-        context="You are a helpful historian assistant.",
+        system_prompt="You are a helpful historian assistant.",
     )
     geo_agent = BaseAIAgent(
         ai_model=agent_ai_model,
         name="Geographer",
         description="Geographer assistant. Answer any question about geography.",
-        context="You are a helpful geographer assistant.",
+        system_prompt="You are a helpful geographer assistant.",
     )
     man_session = AISupervisorSession()
     man_agent = BaseAISupervisor(
         ai_model=ai_model,
-        context="You are a helpful assistant.",
+        system_prompt="You are a helpful assistant.",
         agents=[hist_agent, geo_agent],
         session=man_session,
     )

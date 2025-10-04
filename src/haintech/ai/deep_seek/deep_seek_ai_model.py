@@ -1,8 +1,8 @@
 import logging
 import os
-from typing import Dict
+from typing import Dict, Optional
 
-from openai import OpenAI, AsyncOpenAI
+from openai import AsyncOpenAI, OpenAI
 
 from haintech.ai.open_ai import OpenAIModel, OpenAIParameters
 
@@ -13,7 +13,7 @@ class DeepSeekAIModel(OpenAIModel):
     def __init__(
         self,
         model_name: str = "deepseek-chat",
-        parameters: OpenAIParameters | Dict[str, str | int | float] = None,
+        parameters: Optional[OpenAIParameters | Dict[str, str | int | float]] = None,
     ):
         self.openai = OpenAI(
             api_key=os.getenv("DEEP_SEEK_API_KEY"),
@@ -25,5 +25,5 @@ class DeepSeekAIModel(OpenAIModel):
         )
         self.model_name = model_name
         if parameters and isinstance(parameters, dict):
-            parameters = OpenAIParameters(**parameters)
+            parameters = OpenAIParameters.model_validate(parameters)
         self.parameters = parameters or OpenAIParameters()
