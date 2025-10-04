@@ -27,7 +27,7 @@ class GoogleAIModel(BaseAIModel):
     def __init__(
         self,
         model_name: str = "gemini-2.5-flash",
-        parameters: Optional[GenerationConfig] = None,
+        parameters: Optional[GenerationConfig | Dict[str, Any]] = None,
         api_key: Optional[str] = None,
     ):
         if api_key:
@@ -66,7 +66,7 @@ class GoogleAIModel(BaseAIModel):
             msg_list = chain([self._create_content_from_message(msg_ctx)], msg_list)
         model = GenerativeModel(
             model_name=self.model_name,
-            generation_config=self.parameters,
+            generation_config=self.parameters, # type: ignore
             # system_instruction=context,
         )
         generation_config = GenerationConfig(
