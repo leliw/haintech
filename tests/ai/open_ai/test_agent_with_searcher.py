@@ -1,8 +1,10 @@
 from typing import List
 
 from haintech.ai import AIChatSession, BaseRAGSearcher, RAGItem
+from haintech.ai.base.base_ai_agent import BaseAIAgent
 from haintech.ai.model import RAGQuery
 from haintech.ai.open_ai.open_ai_agent import OpenAIAgent
+from haintech.ai.open_ai.open_ai_model import OpenAIModel
 
 
 class FileRAGSearcher(BaseRAGSearcher):
@@ -28,7 +30,8 @@ def test_agent_one_question():
     # Given: An agent with session and searcher
     searcher = FileRAGSearcher()
     session = AIChatSession()
-    ai_agent = OpenAIAgent(searcher=searcher, session=session)
+    ai_model = OpenAIModel(parameters={"temperature": 0})
+    ai_agent = BaseAIAgent(ai_model=ai_model, searcher=searcher, session=session)
     # And: A simple question
     q = "Who is a father of two?"
     # When: I ask model
@@ -37,6 +40,6 @@ def test_agent_one_question():
     assert "Ferdynand" in response
     # And: RAG item is in interaction
     li =session.get_last_interaction()
-    assert li and li.prompt and li.prompt.documents
-    assert 1 == len(li.prompt.documents)
-    assert "Ferdynand Kiepski" == li.prompt.documents[0].title
+    assert li and li.context and li.context.documents
+    assert 1 == len(li.context.documents)
+    assert "Ferdynand Kiepski" == li.context.documents[0].title

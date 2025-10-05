@@ -20,6 +20,7 @@ from haintech.ai.open_ai import OpenAIModel, OpenAITextEmbeddingModel
 
 @pytest.fixture(
     params=[OpenAIModel, GoogleAIModel, DeepSeekAIModel, AnthropicAIModel],
+    #params=[GoogleAIModel],
     scope="session",
 )
 def ai_model(request: pytest.FixtureRequest) -> BaseAIModel:
@@ -94,7 +95,7 @@ class HRAgent(BaseAIAgent):
     def __init__(self, ai_model: BaseAIModel, session: Optional[AIChatSession] = None):
         super().__init__(
             description="HR assistant. Answer prersonal information about HR, days off and vacation related question.",
-            context="You are a helpful HR assistant.",
+            system_prompt="You are a helpful HR assistant.",
             ai_model=ai_model,
             functions=[
                 get_remaining_vacation_days,

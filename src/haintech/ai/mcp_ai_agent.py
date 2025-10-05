@@ -17,6 +17,7 @@ try:
         instances, discover their available tools, and make them usable by the AI model.
         It is designed to be used as an asynchronous context manager.
         """
+
         _log = logging.getLogger(__name__)
 
         def __init__(
@@ -25,8 +26,7 @@ try:
             mcp_servers: List[MCPServer],
             name: Optional[str] = None,
             description: Optional[str] = None,
-            prompt: Optional[AIPrompt] = None,
-            context: Optional[str] = None,
+            prompt: Optional[str | AIPrompt] = None,
             session: Optional[AIModelSession] = None,
             searcher: Optional[BaseRAGSearcher] = None,
             functions: Optional[List[Callable]] = None,
@@ -48,8 +48,7 @@ try:
                 ai_model=ai_model,
                 name=name,
                 description=description,
-                prompt=prompt,
-                context=context,
+                system_prompt=prompt,
                 session=session,
                 searcher=searcher,
                 functions=functions,
@@ -83,7 +82,7 @@ try:
             function that can be called by the agent to execute the tool.
             """
             for server in self.mcp_servers:
-                tools = await server.list_tools(None, None) # type: ignore
+                tools = await server.list_tools(None, None)  # type: ignore
                 for tool in tools:
                     # Capture tool_name by making it a default argument
                     # to avoid closure issues in the loop.

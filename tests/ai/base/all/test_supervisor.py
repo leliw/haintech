@@ -16,18 +16,18 @@ def test_agents_collaboration(ai_model: BaseAIModel):
         ai_model=ai_model,
         name="Historian",
         description="Historian assistant. Answer any question about history.",
-        context="You are a helpful historian assistant.",
+        system_prompt="You are a helpful historian assistant.",
     )
     geo_agent = BaseAIAgent(
         ai_model=ai_model,
         name="Geographer",
         description="Geographer assistant. Answer any question about geography.",
-        context="You are a helpful geographer assistant.",
+        system_prompt="You are a helpful geographer assistant.",
     )
     man_session = AISupervisorSession()
     man_agent = BaseAISupervisor(
         ai_model=ai_model,
-        context="You are a helpful assistant.",
+        system_prompt="You are a helpful assistant.",
         agents=[hist_agent, geo_agent],
         session=man_session,
     )
@@ -54,7 +54,7 @@ def test_supervisor_with_acceptance(
     ai_supervisor = BaseAISupervisor(
         ai_model=ai_model,
         description="Company Assistant",
-        context="You are a helpful company assistant. Ask other agents if needed.",
+        system_prompt="You are a helpful company assistant. Ask other agents if needed.",
         agents=[hr_agent],
         session=tm_session,
     )
@@ -64,19 +64,22 @@ def test_supervisor_with_acceptance(
     )
     # Then: I should get agent call
     print(response)
+    assert response.tool_calls
     assert 1 == len(response.tool_calls)
     assert "Agent__HRAgent" in response.tool_calls[0].function_name
     # STEP: 2
     # =======
     # When: I accept agent call
-    response = ai_supervisor.accept_tools([tc.id for tc in response.tool_calls])
+    response = ai_supervisor.accept_tools([tc.id for tc in response.tool_calls if tc.id])
     # Then: I should get function call
+    assert response.tool_calls
     assert 1 <= len(response.tool_calls)
     # STEP: 2
     # =======
     # When: I accept function call
-    response = ai_supervisor.accept_tools([tc.id for tc in response.tool_calls])
+    response = ai_supervisor.accept_tools([tc.id for tc in response.tool_calls if tc.id])
     # Then: I should get answer
+    assert response.content
     assert "26" in response.content
 
 
@@ -91,7 +94,7 @@ def test_supervisor_with_without_acceptance_agent_call(
     ai_supervisor = BaseAISupervisor(
         ai_model=ai_model,
         description="Company Assistant",
-        context="You are a helpful company assistant. Ask other agents if needed.",
+        system_prompt="You are a helpful company assistant. Ask other agents if needed.",
         agents=[hr_agent],
         session=tm_session,
     )
@@ -100,6 +103,7 @@ def test_supervisor_with_without_acceptance_agent_call(
         "How many vacation days do I have left in 2025?"
     )
     # Then: I should get agent call
+    assert response.tool_calls
     assert 1 == len(response.tool_calls)
     assert "Agent__HRAgent" in response.tool_calls[0].function_name
     # STEP: 2
@@ -114,7 +118,7 @@ def test_supervisor_with_without_acceptance_agent_call(
 
 
 @pytest.fixture
-def agent_ai_model(ai_model: BaseAIModel) -> BaseAIAgent:
+def agent_ai_model(ai_model: BaseAIModel) -> BaseAIModel:
     """Return agent with different model"""
     if isinstance(ai_model, OpenAIModel):
         return GoogleAIModel(parameters={"temperature": 0})
@@ -122,24 +126,24 @@ def agent_ai_model(ai_model: BaseAIModel) -> BaseAIAgent:
         return OpenAIModel(parameters={"temperature": 0})
 
 
-def test_agent_with_different_model(ai_model: BaseAIModel, agent_ai_model: BaseAIAgent):
+def test_agent_with_different_model(ai_model: BaseAIModel, agent_ai_model: BaseAIModel):
     # Given : Two specialised agents and one manager agent with different model
     hist_agent = BaseAIAgent(
         ai_model=agent_ai_model,
         name="Historian",
         description="Historian assistant. Answer any question about history.",
-        context="You are a helpful historian assistant.",
+        system_prompt="You are a helpful historian assistant.",
     )
     geo_agent = BaseAIAgent(
         ai_model=agent_ai_model,
         name="Geographer",
         description="Geographer assistant. Answer any question about geography.",
-        context="You are a helpful geographer assistant.",
+        system_prompt="You are a helpful geographer assistant.",
     )
     man_session = AISupervisorSession()
     man_agent = BaseAISupervisor(
         ai_model=ai_model,
-        context="You are a helpful assistant.",
+        system_prompt="You are a helpful assistant.",
         agents=[hist_agent, geo_agent],
         session=man_session,
     )

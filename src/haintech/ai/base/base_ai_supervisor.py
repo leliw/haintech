@@ -11,10 +11,10 @@ class BaseAISupervisor(BaseAIAgent):
 
     def __init__(
         self,
+        ai_model: BaseAIModel,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        ai_model: Optional[BaseAIModel] = None,
-        context: Optional[str] = None,
+        system_prompt: Optional[str] = None,
         session: Optional[AISupervisorSession] = None,
         searcher: Optional[BaseRAGSearcher] = None,
         functions: Optional[List[Callable]] = None,
@@ -24,7 +24,7 @@ class BaseAISupervisor(BaseAIAgent):
             name=name,
             description=description,
             ai_model=ai_model,
-            context=context,
+            system_prompt=system_prompt,
             session=session,
             searcher=searcher,
             functions=functions,
@@ -104,7 +104,7 @@ class BaseAISupervisor(BaseAIAgent):
 
                 else:
                     self.call_function(id, name, **arguments)
-            elif id not in agent_responded_ids:
+            elif id and id not in agent_responded_ids:
                 self.add_tool_message(id, "User refused execution.")
 
         return self.get_response()

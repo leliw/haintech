@@ -19,6 +19,8 @@ class RAGQuery(BaseModel):
 class RAGItem(BaseModel):
     item_id: Optional[str] = None
     title: Optional[str] = None
+    url: Optional[str] = None
+    description: Optional[str] = None
     keywords: Optional[List[str]] = Field(
         default_factory=list,
         description="List of keywords associated with the item.",
@@ -110,6 +112,11 @@ class AIPrompt(BaseModel):
     recap: Optional[str] = None
 
 
+class AIContext(BaseModel):
+    context: Optional[str] = None
+    documents: List[str | RAGItem] = Field(default_factory=list)
+
+
 class AIModelInteraction[T: AIModelInteractionMessage](BaseModel):
     """One interaction with AIModel"""
 
@@ -118,8 +125,8 @@ class AIModelInteraction[T: AIModelInteractionMessage](BaseModel):
     tools: Optional[List[AIModelInteractionTool]] = None
     parallel_tool_calls: Optional[bool] = None
     response_format: Optional[Dict[str, str]] = None
-    context: Optional[str] = None
-    prompt: Optional[AIPrompt] = None
+    context: Optional[AIContext] = None
+    prompt: Optional[str | AIPrompt] = None
     history: List[T]
     message: Optional[T] = None
     response: Optional[AIChatResponse] = None
@@ -145,7 +152,7 @@ class AIModelSession[T: AIModelInteractionMessage](ABC):
 
     @classmethod
     def create_message_from_response(cls, response: AIChatResponse) -> T:
-        return AIModelInteractionMessage.create_from_response(response) # type: ignore
+        return AIModelInteractionMessage.create_from_response(response)  # type: ignore
 
 
 class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
@@ -180,7 +187,6 @@ class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
                 last_response = self.get_last_response()
                 if last_response:
                     yield clazz.create_from_response(last_response)
-
 
     def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
         """Get last interaction."""

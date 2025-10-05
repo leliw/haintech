@@ -8,14 +8,14 @@ from openai.types.chat import (
     ChatCompletionMessageParam,
     ChatCompletionToolParam,
 )
-from openai.types.shared_params import FunctionDefinition
 
 from ..base import BaseAIModel
 from ..model import (
     AIChatResponse,
-    AIModelToolCall,
+    AIContext,
     AIModelInteraction,
     AIModelInteractionMessage,
+    AIModelToolCall,
     AIPrompt,
 )
 from .model import OpenAIParameters
@@ -41,10 +41,10 @@ class OpenAIModel(BaseAIModel):
     @override
     def get_chat_response(
         self,
-        message: Optional[AIModelInteractionMessage] = None,
-        prompt: Optional[str | AIPrompt] = None,
-        context: Optional[str | AIPrompt] = None,
+        system_prompt: Optional[str | AIPrompt] = None,
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        context: Optional[AIContext] = None,
+        message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
@@ -52,7 +52,7 @@ class OpenAIModel(BaseAIModel):
         if not isinstance(history, list):
             history = list(history or [])
         parameters, ai_model_interaction = self._prepare_parameters(
-            history, prompt, context, message, functions, response_format
+            system_prompt, history, context, message, functions, response_format
         )
         try:
             resp = self.openai.chat.completions.create(**parameters)
@@ -70,18 +70,18 @@ class OpenAIModel(BaseAIModel):
     @override
     async def get_chat_response_async(
         self,
-        message: Optional[str | AIModelInteractionMessage] = None,
-        prompt: Optional[AIPrompt] = None,
-        context: Optional[str | AIPrompt] = None,
+        system_prompt: Optional[str | AIPrompt] = None,
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        functions: Optional[Dict[str, FunctionDefinition]] = None,
+        context: Optional[AIContext] = None,
+        message: Optional[AIModelInteractionMessage] = None,
+        functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         if not isinstance(history, list):
             history = list(history or [])
         parameters, ai_model_interaction = self._prepare_parameters(
-            history, prompt, context, message, functions, response_format
+            system_prompt, history, context, message, functions, response_format
         )
         try:
             resp = await self.async_openai.chat.completions.create(**parameters)
@@ -98,93 +98,90 @@ class OpenAIModel(BaseAIModel):
 
     def _prepare_parameters(
         self,
+        system_prompt: Optional[str | AIPrompt] = None,
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        prompt: Optional[AIPrompt] = None,
-        context: Optional[str | AIPrompt] = None,
-        message: Optional[str | AIModelInteractionMessage] = None,
-        functions: Optional[Dict[str, FunctionDefinition]] = None,
+        context: Optional[AIContext] = None,
+        message: Optional[AIModelInteractionMessage] = None,
+        functions: Optional[Dict[Callable, Any]] = None,
         response_format: Literal["text", "json"] = "text",
     ):
-        msg_list = [self._create_message(m) for m in history or []]
-        if prompt:
-            context = self._prompt_to_str(prompt)
-        else:
-            context = self._prompt_to_str(context) if context else None
-        if context:
-            msg_list.insert(
-                0,
-                self._create_message(
-                    AIModelInteractionMessage(
-                        role="system", content=self._prompt_to_str(context)
-                    )
-                ),
-            )
+        if not isinstance(history, list):
+            history = list(history or [])
         if message:
             if isinstance(message, str):
                 message = AIModelInteractionMessage(role="user", content=message)
-            msg_list.append(self._create_message(message))
         else:
             message = history.pop()
+        msg_list = []
+        if system_prompt:
+            msg_list.append(
+                self._create_message(
+                    AIModelInteractionMessage(role="system", content=self._prompt_to_str(system_prompt))
+                )
+            )
+        for m in history:
+            msg_list.append(self._create_message(m))
+
+        if context:
+            msg_list.append(
+                self._create_message(AIModelInteractionMessage(role="system", content=self._context_to_str(context)))
+            )
+        msg_list.append(self._create_message(message))
         if functions:
             tools = []
             for f in functions:
                 definition = functions[f]
-                tools.append(
-                    ChatCompletionToolParam(type="function", function=definition)
-                )
+                tools.append(ChatCompletionToolParam(type="function", function=definition))
         else:
             tools = None
         if response_format == "json":
-            response_format = {"type": "json_object"}
+            response_format_dict = {"type": "json_object"}
         else:
-            response_format = {"type": "text"}
+            response_format_dict = {"type": "text"}
 
         ai_model_interaction = AIModelInteraction(
             model=self.model_name,
             message=message,
-            prompt=prompt,
-            context=context if not prompt else None,
+            prompt=system_prompt if isinstance(system_prompt, AIPrompt) else None,
+            context=context,
             history=history,
             tools=tools,
-            response_format=response_format,
+            response_format=response_format_dict,
         )
+        parameters_dict = self.parameters.model_dump() if isinstance(self.parameters, OpenAIParameters) else {}
         return (
             {
                 "model": self.model_name,
                 "messages": msg_list,
                 "tools": tools,
-                "response_format": response_format,
-                **self.parameters.model_dump(),
+                "response_format": response_format_dict,
+                **parameters_dict,
             },
             ai_model_interaction,
         )
 
     @classmethod
-    def _create_message(
-        cls, interaction_message: AIModelInteractionMessage
-    ) -> ChatCompletionMessageParam:
+    def _create_message(cls, interaction_message: AIModelInteractionMessage) -> ChatCompletionMessageParam:
         ret = {
             "role": interaction_message.role,
             "content": interaction_message.content,
-            "tool_call_id": interaction_message.tool_call_id,
-            "tool_calls": (
-                [
-                    {
-                        "id": tool_call.id,
-                        "type": "function",
-                        "function": {
-                            "name": tool_call.function_name,
-                            "arguments": json.dumps(tool_call.arguments),
-                        },
-                    }
-                    for tool_call in interaction_message.tool_calls  # type: ignore
-                ]
-                if interaction_message.tool_calls
-                else None
-            ),
         }
+        if interaction_message.tool_call_id:
+            ret["tool_call_id"] = interaction_message.tool_call_id
+        if interaction_message.tool_calls:
+            ret["tool_calls"] = [
+                {
+                    "id": tool_call.id,
+                    "type": "function",
+                    "function": {
+                        "name": tool_call.function_name,
+                        "arguments": json.dumps(tool_call.arguments),
+                    },
+                }
+                for tool_call in interaction_message.tool_calls  # type: ignore
+            ]
         cls._log.debug("Creating message: %s", interaction_message)
-        return ret
+        return ret  # type: ignore
 
     @classmethod
     def _create_ai_chat_response(cls, m_resp: ChatCompletionMessage) -> AIChatResponse:
@@ -192,10 +189,10 @@ class OpenAIModel(BaseAIModel):
             tool_calls = [
                 AIModelToolCall(
                     id=tool_call.id,
-                    function_name=tool_call.function.name,
-                    arguments=json.loads(tool_call.function.arguments),
+                    function_name=tool_call.function.name,  # type: ignore
+                    arguments=json.loads(tool_call.function.arguments),  # type: ignore
                 )
-                for tool_call in m_resp.tool_calls  # type: ignore
+                for tool_call in m_resp.tool_calls
             ]
         else:
             tool_calls = None

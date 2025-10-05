@@ -7,6 +7,7 @@ from openai.types.shared_params import FunctionDefinition
 
 from ..model import (
     AIChatResponse,
+    AIContext,
     AIFunction,
     AIFunctionParameter,
     AIModelInteraction,
@@ -20,10 +21,10 @@ class BaseAIModel(ABC):
     @abstractmethod
     def get_chat_response(
         self,
-        message: Optional[AIModelInteractionMessage] = None,
-        prompt: Optional[str | AIPrompt] = None,
-        context: Optional[str | AIPrompt] = None,
+        system_prompt: Optional[str | AIPrompt] = None,
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        context: Optional[AIContext] = None,
+        message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
@@ -31,11 +32,13 @@ class BaseAIModel(ABC):
         """Return chat response from LLM
 
         Args:
-            message: message to send to LLM,
-            context: context to send to LLM,
-            history: history of previous messages
-            functions: functions to call
-            interaction_logger: function to log interaction
+            system_prompt: System prompt for LLM
+            history: Chat history
+            context: Context for LLM
+            message: Current message
+            functions: List of functions to use
+            interaction_logger: Callback for logging interactions
+            response_format: Response format, "text" or "json"
         Returns:
             LLM response
         """
@@ -43,22 +46,22 @@ class BaseAIModel(ABC):
 
     async def get_chat_response_async(
         self,
-        message: Optional[AIModelInteractionMessage] = None,
-        prompt: Optional[str | AIPrompt] = None,
-        context: Optional[str | AIPrompt] = None,
+        system_prompt: Optional[str | AIPrompt] = None,
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        context: Optional[AIContext] = None,
+        message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         return self.get_chat_response(
-            message,
-            prompt,
-            context,
-            history,
-            functions,
-            interaction_logger,
-            response_format,
+            message=message,
+            system_prompt=system_prompt,
+            history=history,
+            context=context,
+            functions=functions,
+            interaction_logger=interaction_logger,
+            response_format=response_format,
         )
 
     @classmethod
@@ -102,6 +105,28 @@ class BaseAIModel(ABC):
             ret += "\n"
         if prompt.recap:
             ret += f"Recap: {prompt.recap}\n\n"
+        return ret
+
+    @classmethod
+    def _context_to_str(cls, context: AIContext) -> str:
+        ret = f"{context.context}\n" if context.context else "Document context:\n"
+        for i, doc in enumerate(context.documents):
+            if isinstance(doc, RAGItem):
+                ret += f"Document {i}:\n"
+                if doc.title:
+                    ret += f"Title: {doc.title}\n"
+                if doc.url:
+                    ret += f"URL: {doc.url}\n"
+                if doc.description:
+                    ret += f"Description: {doc.description}\n"  
+                if doc.keywords:
+                    ret += f"Keywords: {', '.join(doc.keywords)}\n"
+                if doc.metadata:
+                    for k, v in doc.metadata.items():
+                        ret += f"{k}: {v}\n"
+                ret += f"{doc.content}\n"
+            else:
+                ret += f"Document {i}:\n{doc}\n"
         return ret
 
     @classmethod

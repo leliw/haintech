@@ -54,7 +54,7 @@ class Pl2EnTranslator(BaseAIChat):
         super().__init__(ai_model=ai_model)
 
     @override
-    def _get_context(self, message=None):
+    def _get_prompt(self, message=None):
         return AIPrompt(
             persona="You are an English to Polish translator.",
             constraints="Answer always in polish.",

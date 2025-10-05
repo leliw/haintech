@@ -47,8 +47,7 @@ class HRAgent(MCPAIAgent):
 
 
 @pytest.mark.asyncio
-async def test(mcp_server):
-    ai_model = OpenAIModel()
+async def test(mcp_server, ai_model: BaseAIModel):
     async with MCPAIAgent(ai_model=ai_model, mcp_servers=[mcp_server]) as agent:
         tools = await mcp_server.list_tools(None, None)
         assert len(tools) == 14

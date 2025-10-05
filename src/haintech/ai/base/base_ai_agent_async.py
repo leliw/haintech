@@ -1,16 +1,16 @@
 import asyncio
 import logging
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, override
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
 from haintech.ai.ai_task_executor import AITaskExecutor
 
 from ..model import (
     AIChatResponse,
+    AIContext,
     AIModelInteractionMessage,
     AIModelSession,
     AIPrompt,
     AITask,
-    RAGQuery,
 )
 from .base_ai_chat_async import BaseAIChatAsync
 from .base_ai_model import BaseAIModel
@@ -27,8 +27,7 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         ai_model: BaseAIModel,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        prompt: Optional[AIPrompt] = None,
-        context: Optional[str] = None,
+        system_prompt: Optional[str | AIPrompt] = None,
         session: Optional[AIModelSession] = None,
         searcher: Optional[BaseRAGSearcher] = None,
         functions: Optional[List[Callable]] = None,
@@ -45,7 +44,7 @@ class BaseAIAgentAsync(BaseAIChatAsync):
             searcher: RAG searcher
             functions: list of functions to add
         """
-        super().__init__(ai_model, prompt or context, session)
+        super().__init__(ai_model, system_prompt, session)
         self.name = name or self.__class__.__name__
         self.description = description
         self.searcher = searcher
@@ -82,10 +81,13 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         Returns:
             response: LLM response
         """
+        system_prompt = self._get_prompt()
+        history = list(self.iter_messages())
         response = await self.ai_model.get_chat_response_async(
+            system_prompt=system_prompt,
+            history=history,
+            context=await self._get_context(system_prompt, history, message),
             message=message,
-            prompt=await self._get_context(message),
-            history=self.iter_messages(),
             functions=self.functions,
             interaction_logger=self._interaction_logger,
         )
@@ -180,21 +182,13 @@ class BaseAIAgentAsync(BaseAIChatAsync):
     def add_tool_message(self, tool_call_id: str, content: str):
         self.add_message(AIModelInteractionMessage(role="tool", tool_call_id=tool_call_id, content=content))
 
-    @override
-    async def _get_context(self, message: Optional[AIModelInteractionMessage] = None) -> str | AIPrompt:
-        ret = super()._get_context(message) or AIPrompt()
-        if message and message.content:
-            msg = message.content
-            if self.searcher:
-                if len(msg) > 15:
-                    self._log.debug("Searching for: %s", msg)
-                    self.rag_items = list(await self.searcher.search_async(RAGQuery(text=msg)))
-                    self._log.debug("Found: %d items", len(self.rag_items))
-                # When message is too short, do not search, just use last search results
-                if isinstance(ret, AIPrompt):
-                    for item in self.rag_items:
-                        self._log.debug("Item: %s", item.title)
-                    if ret.documents is None:
-                        ret.documents = []
-                    ret.documents += self.rag_items
-        return ret
+    async def _get_context(
+        self,
+        system_prompt: str | AIPrompt | None,
+        history: List[AIModelInteractionMessage],
+        message: Optional[AIModelInteractionMessage] = None,
+    ) -> Optional[AIContext]:
+        if not self.searcher:
+            return None
+        else:
+            return await self.searcher.agent_search_async(system_prompt, history, message)
