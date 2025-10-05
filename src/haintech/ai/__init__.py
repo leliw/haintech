@@ -6,6 +6,7 @@ from .base import (
     BaseAIModel,
     BaseAISupervisor,
     BaseRAGSearcher,
+    BaseAgentSearcher,
     BaseAITextEmbeddingModel
 )
 from .model import (
@@ -18,6 +19,7 @@ from .model import (
     AIModelSession,
     AIModelToolCall,
     AIPrompt,
+    AIContext,
     AISupervisorSession,
     AITask,
     RAGItem,
@@ -36,6 +38,7 @@ __all__ = [
     "AIFunction",
     "AIModelInteraction",
     "AIPrompt",
+    "AIContext",
     "AISupervisorSession",
     "RAGItem",
     "RAGQuery",
@@ -47,6 +50,7 @@ __all__ = [
     "BaseAISupervisor",
     "BaseAITextEmbeddingModel",
     "BaseRAGSearcher",
+    "BaseAgentSearcher",
     "AIFunction",
     "AIFunctionParameter",
     "AITask",

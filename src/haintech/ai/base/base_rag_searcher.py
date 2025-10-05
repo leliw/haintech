@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import logging
-from typing import Iterable, List, Optional
+from typing import AsyncIterable, Iterable, List, Optional
 
 from ..model import AIContext, AIModelInteractionMessage, AIPrompt, RAGItem, RAGQuery
 
@@ -19,7 +19,7 @@ class BaseRAGSearcher(ABC):
         """  
         pass
 
-    async def search_async(self, query: RAGQuery) -> Iterable[RAGItem]:
+    async def search_async(self, query: RAGQuery) -> AsyncIterable[RAGItem]:
         """Search for items in RAG.
 
         Args:
@@ -27,7 +27,8 @@ class BaseRAGSearcher(ABC):
         Returns:
             iterable: iterable of RAG items
         """  
-        return self.search_sync(query)
+        for r in self.search_sync(query):
+            yield r
 
     def agent_search_sync(
         self,
@@ -74,7 +75,7 @@ class BaseRAGSearcher(ABC):
             msg = message.content
             if len(msg) > 15:
                 self._log.debug("Searching for: %s", msg)
-                ret = AIContext(documents= list(await self.search_async(RAGQuery(text=msg))))
+                ret = AIContext(documents= [r async for r in self.search_async(RAGQuery(text=msg))])
                 self._log.debug("Found: %d items", len(ret.documents))
                 return ret
             else:
