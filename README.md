@@ -1,9 +1,15 @@
 # Haintech
 
+![Python](https://img.shields.io/badge/python-3.12-blue)
+
 A utility package for AI solutions.
 There are two packages:
 
-* [ai](doc/ai.md) - abstraction layer and utilities for LLMs
+* [ai](doc/ai.md) - abstraction layer and utilities for LLMs:
+  * OpenAI
+  * Google / Gemini
+  * DeepSeek
+  * Anthropic
 * [pipelines](doc/pipelines.md) - framework for buiding pipelines
 
 ## Build and publish

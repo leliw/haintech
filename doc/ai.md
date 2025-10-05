@@ -5,6 +5,7 @@ Implementations of `BaseAIModel` include:
 * OpenAIModel()
 * GoogleAIModel()
 * DeepSeekAIModel()
+* AnthropicAIModel()
 
 ## Model Classes
 
