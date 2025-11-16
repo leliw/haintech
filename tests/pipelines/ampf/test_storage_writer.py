@@ -50,7 +50,7 @@ async def test_pipe_key_name(factory, data):
 @pytest.mark.asyncio
 async def test_pipe_key_name_expr(factory, data):
     # Given: Storage
-    storage = factory.create_storage("test2", D)
+    storage = factory.create_storage("test2", D, key=lambda x: f"xx{x.page_no}")
     # And: Pipeline with BlobStorageWriter where key_name is set as lambda
     pl = Pipeline(
         [
