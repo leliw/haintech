@@ -2,10 +2,10 @@
 
 Implementations of `BaseAIModel` include:
 
-* OpenAIModel()
-* GoogleAIModel()
-* DeepSeekAIModel()
-* AnthropicAIModel()
+* OpenAIModel
+* [GoogleAIModel](./ai/google_ai_model.md)
+* DeepSeekAIModel
+* AnthropicAIModel
 
 ## Model Classes
 

@@ -6,10 +6,10 @@ from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, overr
 import google.generativeai as genai
 from google.generativeai import protos
 from google.generativeai.client import configure as genai_configure
-from google.generativeai.generative_models import GenerativeModel
+from google.generativeai.generative_models import ChatSession, GenerativeModel
 from google.generativeai.types import GenerationConfig, generation_types
 
-from haintech.ai.model import AIModelToolCall, AIFunction, AIPrompt, RAGItem
+from haintech.ai.model import AIFunction, AIModelToolCall, AIPrompt, RAGItem
 
 from ..base import BaseAIModel
 from ..model import (
@@ -19,11 +19,12 @@ from ..model import (
     AIModelInteractionMessage,
 )
 
+_log = logging.getLogger(__name__)
 
 class GoogleAIModel(BaseAIModel):
     """Google AI implementation of BaseAIModel"""
 
-    _log = logging.getLogger(__name__)
+    _configured = False
 
     def __init__(
         self,
@@ -32,9 +33,18 @@ class GoogleAIModel(BaseAIModel):
         api_key: Optional[str] = None,
     ):
         if api_key:
-            genai_configure(api_key=api_key)
+            self.setup(api_key=api_key)
         self.model_name = model_name
         self.parameters = parameters
+
+
+    @classmethod
+    def setup(cls, api_key: Optional[str] = None):
+        if not cls._configured:
+            genai_configure(api_key=api_key)
+            cls._configured = True
+            _log.debug("Google AI Model configured")
+
 
     def get_model_names(self) -> List[str]:
         return [m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods]  # type: ignore
@@ -50,6 +60,56 @@ class GoogleAIModel(BaseAIModel):
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
+        history = list(history or [])
+        parameters = self._prepare_parameters(system_prompt, history, context, message, functions, response_format)
+        response = self._get_chat_response(**parameters)
+        if interaction_logger:
+            interaction_logger(
+                AIModelInteraction(
+                    model=self.model_name,
+                    message=message,
+                    context=context,
+                    history=history,
+                    response=response,
+                )
+            )
+        return response
+
+    @override
+    async def get_chat_response_async(
+        self,
+        system_prompt: Optional[str | AIPrompt] = None,
+        history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        context: Optional[AIContext] = None,
+        message: Optional[AIModelInteractionMessage] = None,
+        functions: Optional[Dict[Callable, Any]] = None,
+        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        response_format: Literal["text", "json"] = "text",
+    ) -> AIChatResponse:
+        history = list(history or [])
+        parameters = self._prepare_parameters(system_prompt, history, context, message, functions, response_format)
+        response = await self._get_chat_response_async(**parameters)
+        if interaction_logger:
+            interaction_logger(
+                AIModelInteraction(
+                    model=self.model_name,
+                    message=message,
+                    context=context,
+                    history=history,
+                    response=response,
+                )
+            )
+        return response
+
+    def _prepare_parameters(
+        self,
+        system_prompt: Optional[str | AIPrompt] = None,
+        history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        context: Optional[AIContext] = None,
+        message: Optional[AIModelInteractionMessage] = None,
+        functions: Optional[Dict[Callable, Any]] = None,
+        response_format: Literal["text", "json"] = "text",
+    ) -> Dict[str, Any]:
         history = history or []
         if not isinstance(history, list):
             history = list(history)
@@ -74,23 +134,35 @@ class GoogleAIModel(BaseAIModel):
             response_mime_type="text/plain" if response_format == "text" else "application/json"
         )
         chat = model.start_chat(history=msg_list)
+        return {"chat": chat, "message": message, "generation_config": generation_config, "functions": functions}
+
+    def _get_chat_response(
+        self,
+        chat: ChatSession,
+        message: AIModelInteractionMessage,
+        generation_config: GenerationConfig,
+        functions: Optional[Dict[Callable, Any]] = None,
+    ) -> AIChatResponse:
         native_response = chat.send_message(
             self._create_content_from_message(message),
             generation_config=generation_config,
             tools=functions.values() if functions else None,
         )
-        response = self._create_response_from_content_response(native_response)
-        if interaction_logger:
-            interaction_logger(
-                AIModelInteraction(
-                    model=self.model_name,
-                    message=message,
-                    context=context,
-                    history=history,
-                    response=response,
-                )
-            )
-        return response
+        return self._create_response_from_content_response(native_response)
+
+    async def _get_chat_response_async(
+        self,
+        chat: ChatSession,
+        message: AIModelInteractionMessage,
+        generation_config: GenerationConfig,
+        functions: Optional[Dict[Callable, Any]] = None,
+    ) -> AIChatResponse:
+        native_response = await chat.send_message_async(
+            self._create_content_from_message(message),
+            generation_config=generation_config,
+            tools=functions.values() if functions else None,
+        )
+        return await self._create_response_from_content_response_async(native_response)
 
     @classmethod
     def _prompt_to_str(cls, prompt: str | AIPrompt) -> str:
@@ -120,7 +192,6 @@ class GoogleAIModel(BaseAIModel):
         if prompt.recap:
             ret += f"<RECAP>\n{prompt.recap}\n</RECAP>\n"
         return ret
-
 
     @classmethod
     def _create_content_from_message(cls, i_message: AIModelInteractionMessage) -> protos.Content:
@@ -202,6 +273,46 @@ class GoogleAIModel(BaseAIModel):
 
     @classmethod
     def _create_response_from_content_response(cls, n_resp: generation_types.GenerateContentResponse) -> AIChatResponse:
+        """Converts protos.GenerateContentResponse to AIChatResponse
+
+        Args:
+            n_resp: protos.GenerateContentResponse
+        Returns:
+            AIChatResponse
+        """
+        tool_calls = []
+        texts = []
+        name_indices = {}
+        for part in n_resp.parts:
+            if part.function_call:
+                fc = part.function_call
+                name = fc.name
+                # If id is provided, use it
+                if fc.id:
+                    tool_id = fc.id
+                # If not, use name and add numbering
+                else:
+                    idx = name_indices.get(name, 1)
+                    tool_id = f"{name}__{idx}"
+                    name_indices[name] = idx + 1
+                tool_calls.append(
+                    AIModelToolCall(
+                        id=tool_id,
+                        function_name=name,
+                        arguments=dict(fc.args),
+                    )
+                )
+            if part.text:
+                texts.append(part.text)
+        return AIChatResponse(
+            content="\n".join(texts) or None,
+            tool_calls=tool_calls or None,
+        )
+
+    @classmethod
+    async def _create_response_from_content_response_async(
+        cls, n_resp: generation_types.AsyncGenerateContentResponse
+    ) -> AIChatResponse:
         """Converts protos.GenerateContentResponse to AIChatResponse
 
         Args:

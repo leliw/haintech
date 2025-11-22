@@ -8,10 +8,16 @@ from haintech.ai.model import AIFunctionParameter, AIPrompt, AITask
 from haintech.ai.open_ai import OpenAIModel
 
 
-@pytest.fixture(params=[OpenAIModel, GoogleAIModel, DeepSeekAIModel])
+@pytest.fixture(
+    params=[OpenAIModel, GoogleAIModel, DeepSeekAIModel],
+    # params=[GoogleAIModel],
+    scope="function",
+)
 def ai_model(request: pytest.FixtureRequest) -> BaseAIModel:
-    ai_model = request.param(parameters={"temperature": 0})
-    return ai_model
+    if request.param == GoogleAIModel:
+        from google.generativeai.client import configure as genai_configure
+        genai_configure()
+    return request.param(parameters={"temperature": 0})
 
 
 def test_return_str(ai_model):
@@ -125,6 +131,7 @@ async def test_async_return_str(ai_model):
     # Then: Return string
     assert isinstance(ret, str)
     assert "users" == ret
+
 
 if __name__ == "__main__":
     pytest.main(["-s", __file__])
