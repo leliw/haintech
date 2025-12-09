@@ -18,7 +18,6 @@ class BaseAgentSearcher(BaseRAGSearcher):
         system_instructions: str = "Task: Based on the system description, conversation, and user question, generate one short search query for document retrieval.",
         prompt: str = "Input:\nSystem: {system_prompt}\nHistory: {conversation_history}\nQuestion: {user_question}\n\nOutput:\nOnly one query between 20 and 100 tokens, no comments or markdown.",
     ):
-        super().__init__()
         self.ai_task_executor = AITaskExecutor(
             ai_model=ai_model, system_instructions=system_instructions, prompt=prompt, response_format="text"
         )
