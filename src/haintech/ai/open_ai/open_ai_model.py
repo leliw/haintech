@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any, Callable, Dict, Iterable, Literal, Optional, override
+from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, override
 
 from openai import AsyncOpenAI, OpenAI
 from openai.types.chat import (
@@ -38,6 +38,9 @@ class OpenAIModel(BaseAIModel):
             parameters = OpenAIParameters(**parameters)
         self.parameters = parameters or OpenAIParameters()
 
+    def get_model_names(self) -> List[str]:
+        return [m.id for m in self.openai.models.list().data] 
+    
     @override
     def get_chat_response(
         self,
@@ -148,9 +151,7 @@ class OpenAIModel(BaseAIModel):
             tools=tools,
             response_format=response_format_dict,
         )
-        parameters_dict = (
-            self.parameters.get_for_model(self.model_name) if isinstance(self.parameters, OpenAIParameters) else {}
-        )
+        parameters_dict = self.parameters.get_for_model(self.model_name) if isinstance(self.parameters, OpenAIParameters) else {}
         return (
             {
                 "model": self.model_name,

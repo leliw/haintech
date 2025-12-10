@@ -16,3 +16,9 @@ def test_get_chat_response(ai_model: OpenAIModel):
         message=AIModelInteractionMessage(role="user", content="What is the capital of France?"),
     )
     assert response.content == "The capital of France is Paris."
+
+
+def test_get_model_names():
+    ai_model = OpenAIModel("gpt-4o-mini")
+    model_names = ai_model.get_model_names()
+    assert "gpt-4o-mini" in model_names
