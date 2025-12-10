@@ -8,3 +8,9 @@ class OpenAIParameters(BaseModel):
     top_p: Optional[float] = 1
     frequency_penalty: Optional[float] = 0
     presence_penalty: Optional[float] = 0
+
+    def get_for_model(self, model_name: str) -> dict:
+        if model_name.startswith("gpt-5"):
+            return self.model_dump(exclude_none=True, exclude={"max_tokens", "temperature"})
+        else:
+            return self.model_dump(exclude_none=True)

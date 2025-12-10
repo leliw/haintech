@@ -148,7 +148,9 @@ class OpenAIModel(BaseAIModel):
             tools=tools,
             response_format=response_format_dict,
         )
-        parameters_dict = self.parameters.model_dump() if isinstance(self.parameters, OpenAIParameters) else {}
+        parameters_dict = (
+            self.parameters.get_for_model(self.model_name) if isinstance(self.parameters, OpenAIParameters) else {}
+        )
         return (
             {
                 "model": self.model_name,
