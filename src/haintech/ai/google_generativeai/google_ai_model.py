@@ -21,6 +21,10 @@ from ..model import (
 
 _log = logging.getLogger(__name__)
 
+class GoogleAIParameters(GenerationConfig):
+    pass
+
+
 class GoogleAIModel(BaseAIModel):
     """Google AI implementation of BaseAIModel"""
 
