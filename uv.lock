@@ -125,16 +125,16 @@ wheels = [
 
 [[package]]
 name = "ampf"
-version = "0.8.17"
+version = "0.8.19"
 source = { registry = "https://europe-west3-python.pkg.dev/development-428212/pip/simple" }
 dependencies = [
     { name = "aiofiles" },
     { name = "aiohttp" },
     { name = "pydantic" },
 ]
-sdist = { url = "https://europe-west3-python.pkg.dev/development-428212/pip/ampf/ampf-0.8.17.tar.gz", hash = "sha256:3c9c223a9338375cdff86ad14a79e59caaba0edbbb158ce986d24c37da08ea57" }
+sdist = { url = "https://europe-west3-python.pkg.dev/development-428212/pip/ampf/ampf-0.8.19.tar.gz", hash = "sha256:62de2362dc6a6ffa97f2aa047dff4c1ebe458aac48507e5807fb5ad02802331c" }
 wheels = [
-    { url = "https://europe-west3-python.pkg.dev/development-428212/pip/ampf/ampf-0.8.17-py3-none-any.whl", hash = "sha256:6baf535e83f9c00718720efaec3d7e08b66513d4f6a5e391ab4af87e0cd80e18" },
+    { url = "https://europe-west3-python.pkg.dev/development-428212/pip/ampf/ampf-0.8.19-py3-none-any.whl", hash = "sha256:857b372b3514805856c2a9027d3b6db82ef45cea6eba7c881f639554a5cd324c" },
 ]
 
 [[package]]
@@ -713,21 +713,23 @@ wheels = [
 
 [[package]]
 name = "google-genai"
-version = "1.54.0"
+version = "1.55.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
+    { name = "distro" },
     { name = "google-auth", extra = ["requests"] },
     { name = "httpx" },
     { name = "pydantic" },
     { name = "requests" },
+    { name = "sniffio" },
     { name = "tenacity" },
     { name = "typing-extensions" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e0/5d/0b8305a034db5ffcaf99d0842a0d941e01851c1c3806c68fb43723837c72/google_genai-1.54.0.tar.gz", hash = "sha256:ab7de6741437ee17f01d4db85e351eb8504466663cd83ce420ecb4e29b58b00d", size = 260467, upload-time = "2025-12-08T19:03:13.972Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1d/7c/19b59750592702305ae211905985ec8ab56f34270af4a159fba5f0214846/google_genai-1.55.0.tar.gz", hash = "sha256:ae9f1318fedb05c7c1b671a4148724751201e8908a87568364a309804064d986", size = 477615, upload-time = "2025-12-11T02:49:28.624Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5c/93/7096cdc1a4a55cc60bc02638f7077255acd32968c437cc32783e5abe430d/google_genai-1.54.0-py3-none-any.whl", hash = "sha256:c06853402814a47bb020f2dc50fc03fb77cc349dff65da35cddbd19046f9bd58", size = 262359, upload-time = "2025-12-08T19:03:12.337Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/86/a5a8e32b2d40b30b5fb20e7b8113fafd1e38befa4d1801abd5ce6991065a/google_genai-1.55.0-py3-none-any.whl", hash = "sha256:98c422762b5ff6e16b8d9a1e4938e8e0ad910392a5422e47f5301498d7f373a1", size = 703389, upload-time = "2025-12-11T02:49:27.105Z" },
 ]
 
 [[package]]
@@ -839,7 +841,7 @@ wheels = [
 
 [[package]]
 name = "haintech"
-version = "0.3.8"
+version = "0.3.9"
 source = { editable = "." }
 dependencies = [
     { name = "ampf" },
