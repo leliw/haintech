@@ -4,11 +4,13 @@ from itertools import chain
 from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, override
 
 import google.generativeai as genai
+from google.api_core import exceptions
 from google.generativeai import protos
 from google.generativeai.client import configure as genai_configure
 from google.generativeai.generative_models import ChatSession, GenerativeModel
 from google.generativeai.types import GenerationConfig, generation_types
 
+from haintech.ai.exceptions import UnsupportedMimeTypeError
 from haintech.ai.model import AIFunction, AIModelToolCall, AIPrompt, RAGItem
 
 from ..base import BaseAIModel
@@ -20,6 +22,7 @@ from ..model import (
 )
 
 _log = logging.getLogger(__name__)
+
 
 class GoogleAIParameters(GenerationConfig):
     pass
@@ -41,14 +44,12 @@ class GoogleAIModel(BaseAIModel):
         self.model_name = model_name
         self.parameters = parameters
 
-
     @classmethod
     def setup(cls, api_key: Optional[str] = None):
         if not cls._configured:
             genai_configure(api_key=api_key)
             cls._configured = True
             _log.debug("Google AI Model configured")
-
 
     def get_model_names(self) -> List[str]:
         return [m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods]  # type: ignore
@@ -147,12 +148,18 @@ class GoogleAIModel(BaseAIModel):
         generation_config: GenerationConfig,
         functions: Optional[Dict[Callable, Any]] = None,
     ) -> AIChatResponse:
-        native_response = chat.send_message(
-            self._create_content_from_message(message),
-            generation_config=generation_config,
-            tools=functions.values() if functions else None,
-        )
-        return self._create_response_from_content_response(native_response)
+        try:
+            native_response = chat.send_message(
+                self._create_content_from_message(message),
+                generation_config=generation_config,
+                tools=functions.values() if functions else None,
+            )
+            return self._create_response_from_content_response(native_response)
+        except exceptions.InvalidArgument as e:
+            if "Unsupported MIME type" in str(e):
+                raise UnsupportedMimeTypeError()
+            else:
+                raise e
 
     async def _get_chat_response_async(
         self,
@@ -161,13 +168,18 @@ class GoogleAIModel(BaseAIModel):
         generation_config: GenerationConfig,
         functions: Optional[Dict[Callable, Any]] = None,
     ) -> AIChatResponse:
-        native_response = await chat.send_message_async(
-            self._create_content_from_message(message),
-            generation_config=generation_config,
-            tools=functions.values() if functions else None,
-        )
-        return await self._create_response_from_content_response_async(native_response)
-
+        try:
+            native_response = await chat.send_message_async(
+                self._create_content_from_message(message),
+                generation_config=generation_config,
+                tools=functions.values() if functions else None,
+            )
+            return await self._create_response_from_content_response_async(native_response)
+        except exceptions.InvalidArgument as e:
+            if "Unsupported MIME type" in str(e):
+                raise UnsupportedMimeTypeError()
+            else:
+                raise e
     @classmethod
     def _prompt_to_str(cls, prompt: str | AIPrompt) -> str:
         if isinstance(prompt, str):
@@ -209,6 +221,8 @@ class GoogleAIModel(BaseAIModel):
         if i_message.role == "tool":
             return cls._create_content_from_function_response(i_message)
         parts = [protos.Part(text=i_message.content)] if i_message.content else []
+        for blob in i_message.blobs or []:
+            parts.append(protos.Part(inline_data=protos.Blob(data=blob.content, mime_type=blob.content_type)))
         for f in cls._create_parts_from_tool_calls(i_message):
             parts.append(f)
         return protos.Content(

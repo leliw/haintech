@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any, Dict, Iterator, List, Optional, Tuple, override
 
 from pydantic import BaseModel, Field
-
+from ampf.base import Blob
 
 class RAGQuery(BaseModel):
     """
@@ -66,6 +66,7 @@ class AIModelInteractionMessage(BaseModel):
     name: Optional[str] = None
     tool_call_id: Optional[str] = None  # Only for role=tool
     content: Optional[str] = None
+    blobs: Optional[List[Blob]] = None
     tool_calls: Optional[List[AIModelToolCall]] = None
 
     @classmethod
