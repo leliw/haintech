@@ -391,7 +391,7 @@ class GoogleAIModel(BaseAIModel):
                     case _:
                         type = protos.Type.STRING
                 parameters.properties[param_name] = protos.Schema(type=type)
-            parameters.required = tool.inputSchema["required"]
+            parameters.required = tool.inputSchema["required"] if "required" in tool.inputSchema else [] 
             return protos.FunctionDeclaration(
                 name=tool.name,
                 description=tool.description,

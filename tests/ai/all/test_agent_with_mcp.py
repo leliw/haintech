@@ -11,7 +11,6 @@ from haintech.ai import (
     BaseAIModel,
 )
 from haintech.ai.mcp_ai_agent import MCPAIAgent
-from haintech.ai.open_ai.open_ai_model import OpenAIModel
 
 
 @pytest.fixture(scope="session")

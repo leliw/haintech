@@ -268,15 +268,22 @@ class BaseAIModel(ABC):
             Returns:
                 A FunctionDefinition object representing the tool.
             """
-            return {
-                "name": tool.name,
-                "description": tool.description,
-                "parameters": {
-                    "type": "object",
-                    "properties": tool.inputSchema["properties"],
-                    "required": tool.inputSchema["required"],
-                },
-            }
+            try:
+                ret = {
+                    "name": tool.name,
+                    "description": tool.description,
+                }
+                if tool.inputSchema["properties"]:
+                    ret["parameters"] = {
+                        "type": "object",
+                        "properties": tool.inputSchema["properties"],
+                        "required": tool.inputSchema["required"],
+                    }
+                return ret
+            except Exception as e:
+                print(f"Error preparing MCP tool definition: {e}")
+                raise e
+
 
     except ImportError:
         pass

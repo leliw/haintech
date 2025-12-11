@@ -11,7 +11,7 @@ from haintech.ai import (
     AIPrompt,
     BaseAIModel,
 )
-from haintech.ai.model import AIContext, AIModelToolCall, AIFunction, AIModelInteractionTool
+from haintech.ai.model import AIContext, AIFunction, AIModelInteractionTool, AIModelToolCall
 
 
 class AnthropicAIModel(BaseAIModel):
@@ -48,7 +48,6 @@ class AnthropicAIModel(BaseAIModel):
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
-
     ) -> AIChatResponse:
         parameters, ai_model_interaction = self._prepare_parameters(
             system_prompt, history, context, message, functions, response_format
@@ -74,15 +73,12 @@ class AnthropicAIModel(BaseAIModel):
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
-
     ) -> AIChatResponse:
         parameters, ai_model_interaction = self._prepare_parameters(
             system_prompt, history, context, message, functions, response_format
         )
         try:
-            resp: anthropic.types.Message = await self.async_client.messages.create(
-                **parameters
-            )
+            resp: anthropic.types.Message = await self.async_client.messages.create(**parameters)
             response = self._create_ai_chat_response(resp.content)  # type: ignore
         except Exception as e:
             self._log.error("Error: %s", e)
@@ -100,7 +96,6 @@ class AnthropicAIModel(BaseAIModel):
         message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         response_format: Literal["text", "json"] = "text",
-
     ):
         self._log.debug("Preparing parameters for Anthropic model")
         if not isinstance(history, list):
@@ -130,9 +125,7 @@ class AnthropicAIModel(BaseAIModel):
             prompt=system_prompt,
             context=context,
             history=history,
-            tools=[
-                AIModelInteractionTool(type="function", function=tool) for tool in tools
-            ],
+            tools=[AIModelInteractionTool(type="function", function=tool) for tool in tools],
             response_format=response_format_param,
         )
         system = self._prompt_to_str(system_prompt) if isinstance(system_prompt, AIPrompt) else system_prompt
@@ -151,10 +144,9 @@ class AnthropicAIModel(BaseAIModel):
     def _create_message(
         cls, interaction_message: AIModelInteractionMessage, context: Optional[AIContext] = None
     ) -> Dict[str, Any]:
-        
         cls._log.debug("Creating message: %s", interaction_message)
         if context:
-            cls._log.debug("With context: %s", context)    
+            cls._log.debug("With context: %s", context)
 
         if interaction_message.tool_call_id:
             ret = {
@@ -168,11 +160,7 @@ class AnthropicAIModel(BaseAIModel):
                 ],
             }
         else:
-            role = (
-                interaction_message.role
-                if interaction_message.role != "tool"
-                else "user"
-            )
+            role = interaction_message.role if interaction_message.role != "tool" else "user"
             content = []
             if interaction_message.content:
                 content.append(
@@ -236,9 +224,7 @@ class AnthropicAIModel(BaseAIModel):
             if param.required:
                 parameters["required"].append(param_name)
 
-        parameters["additionalProperties"] = (
-            False  # Ensure no extra properties are allowed
-        )
+        parameters["additionalProperties"] = False  # Ensure no extra properties are allowed
 
         return {
             "name": ai_function.name,
@@ -262,15 +248,16 @@ class AnthropicAIModel(BaseAIModel):
             """
             if tool.inputSchema is None:
                 raise ValueError(f"Tool {tool.name} has no inputSchema")
-            return {
+            ret = {
                 "name": tool.name,
                 "description": tool.description,
-                "input_schema": {
+            }
+            if tool.inputSchema["properties"]:
+                ret["input_schema"] = {
                     "type": "object",
                     "properties": tool.inputSchema["properties"],
                     "required": tool.inputSchema["required"],
-                },
-            }
-
+                }
+            return ret
     except ImportError:
         pass
