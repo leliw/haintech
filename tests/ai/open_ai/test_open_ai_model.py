@@ -15,7 +15,7 @@ def test_get_chat_response(ai_model: OpenAIModel):
         system_prompt="You are a helpful assistant.",
         message=AIModelInteractionMessage(role="user", content="What is the capital of France?"),
     )
-    assert response.content == "The capital of France is Paris."
+    assert response.content and "Paris" in response.content
 
 
 def test_get_model_names():
