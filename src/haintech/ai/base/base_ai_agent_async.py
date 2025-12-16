@@ -2,6 +2,8 @@ import asyncio
 import logging
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
+from ampf.base import BaseAsyncFactory
+
 from haintech.ai.ai_task_executor import AITaskExecutor
 
 from ..model import (
@@ -31,6 +33,7 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         session: Optional[AIModelSession] = None,
         searcher: Optional[BaseRAGSearcher] = None,
         functions: Optional[List[Callable]] = None,
+        factory: Optional[BaseAsyncFactory] = None,
     ):
         """Base AI Agent.
 
@@ -50,6 +53,7 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         self.searcher = searcher
         self.functions: Dict[Callable, Any] = {}
         self.function_names: Dict[str, Callable] = {}
+        self.factory = factory
         if functions:
             for f in functions:
                 self.add_function(f)
@@ -81,6 +85,8 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         Returns:
             response: LLM response
         """
+        if message:
+            await self.download_blobs(message)
         system_prompt = self._get_prompt()
         history = list(self.iter_messages())
         response = await self.ai_model.get_chat_response_async(
@@ -91,6 +97,11 @@ class BaseAIAgentAsync(BaseAIChatAsync):
             functions=self.functions,
             interaction_logger=self._interaction_logger,
         )
+        if message and self.session:
+            # Clear blobs from history to save memory
+            interaction = self.session.get_last_interaction()
+            if interaction and interaction.message and interaction.message == message:
+                interaction.message.blobs = None
         return response
 
     async def get_response(self, message: Optional[AIModelInteractionMessage | str] = None) -> AIChatResponse:
@@ -192,3 +203,20 @@ class BaseAIAgentAsync(BaseAIChatAsync):
             return None
         else:
             return await self.searcher.agent_search_async(system_prompt, history, message)
+
+    async def download_blobs(self, message: AIModelInteractionMessage) -> None:
+        """Download blobs for the message using the factory.
+
+        Args:
+            message: The AIModelInteractionMessage containing blobs to download.
+        """
+        if message.blob_locations and not self.factory:
+            raise ValueError("Factory is not set for downloading blobs.")
+        if not message.blob_locations:
+            return
+        if self.factory:
+            blobs = []
+            for blob_location in message.blob_locations:
+                blob = await self.factory.download_blob(blob_location)
+                blobs.append(blob)
+            message.blobs = blobs

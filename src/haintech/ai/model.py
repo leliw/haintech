@@ -4,7 +4,8 @@ from datetime import datetime
 from typing import Any, Dict, Iterator, List, Optional, Tuple, override
 
 from pydantic import BaseModel, Field
-from ampf.base import Blob
+from ampf.base import Blob, BlobLocation
+
 
 class RAGQuery(BaseModel):
     """
@@ -21,12 +22,12 @@ class RAGItem(BaseModel):
     title: Optional[str] = None
     url: Optional[str] = None
     description: Optional[str] = None
-    keywords: Optional[List[str]] = Field(
+    keywords: List[str] = Field(
         default_factory=list,
         description="List of keywords associated with the item.",
     )
     content: str
-    metadata: Optional[Dict[str, str]] = Field(
+    metadata: Dict[str, str] = Field(
         default_factory=dict,
         description="Additional metadata for the item.",
     )
@@ -66,6 +67,7 @@ class AIModelInteractionMessage(BaseModel):
     name: Optional[str] = None
     tool_call_id: Optional[str] = None  # Only for role=tool
     content: Optional[str] = None
+    blob_locations: List[BlobLocation] = Field(default_factory=list)
     blobs: Optional[List[Blob]] = None
     tool_calls: Optional[List[AIModelToolCall]] = None
 
@@ -107,9 +109,9 @@ class AIPrompt(BaseModel):
     instructions: Optional[str] = None
     constraints: Optional[str] = None
     context: Optional[str] = None
-    documents: Optional[List[str | RAGItem]] = Field(default_factory=list)
+    documents: List[str | RAGItem] = Field(default_factory=list)
     output_format: Optional[str] = None
-    examples: Optional[List[str]] = Field(default_factory=list)
+    examples: List[str] = Field(default_factory=list)
     recap: Optional[str] = None
 
 
@@ -142,14 +144,21 @@ class AIModelSession[T: AIModelInteractionMessage](ABC):
         pass
 
     @abstractmethod
+    def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
+        """Get last response (from last interaction)."""
+        pass
+
+    @abstractmethod
     def messages_iterator(self) -> Iterator[T]:
         """Itrerates over all messages (from last interaction)."""
         pass
 
-    @abstractmethod
     def get_last_response(self) -> Optional[AIChatResponse]:
-        """Get last response (from last interaction)."""
-        pass
+        """Get last response."""
+        last_interaction = self.get_last_interaction()
+        if last_interaction:
+            return last_interaction.response
+        return None
 
     @classmethod
     def create_message_from_response(cls, response: AIChatResponse) -> T:
@@ -166,14 +175,6 @@ class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
     @override
     def add_interaction(self, interaction: AIModelInteraction[T]):
         self.interactions.append(interaction)
-
-    @override
-    def get_last_response(self) -> Optional[AIChatResponse]:
-        """Get last response."""
-        last_interaction = self.get_last_interaction()
-        if last_interaction:
-            return last_interaction.response
-        return None
 
     @override
     def messages_iterator(self) -> Iterator[T]:
@@ -229,6 +230,14 @@ class AISupervisorSession[T: AIModelInteractionMessage](BaseModel, AIModelSessio
     def add_interaction(self, interaction: AIModelInteraction[T]):
         self.interactions.append((self.agent_name, interaction))
 
+    def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
+        """Get last interaction."""
+        if self.interactions:
+            for agent_name, interaction in reversed(self.interactions):
+                if agent_name == self.agent_name:
+                    return interaction
+        return None
+
     @override
     def get_last_response(self) -> Optional[AIChatResponse]:
         """Get last response."""
@@ -280,12 +289,12 @@ class AIAgentSession[T: AIModelInteractionMessage](AIModelSession[T]):
         self.interactions.append((self.agent_name, interaction))
 
     @override
-    def get_last_response(self) -> Optional[AIChatResponse]:
+    def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
         """Get last response."""
         if self.interactions:
             for agent_name, interaction in reversed(self.interactions):
                 if agent_name == self.agent_name:
-                    return interaction.response
+                    return interaction
         return None
 
     @override

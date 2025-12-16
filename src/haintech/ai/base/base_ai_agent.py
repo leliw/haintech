@@ -15,6 +15,8 @@ from .base_ai_chat import BaseAIChat
 from .base_ai_model import BaseAIModel
 from .base_rag_searcher import BaseRAGSearcher
 
+from ampf.base import BaseFactory
+
 
 class BaseAIAgent(BaseAIChat):
     """Base AI Agent. It is AI Chat with tools."""
@@ -30,6 +32,7 @@ class BaseAIAgent(BaseAIChat):
         session: Optional[AIModelSession] = None,
         searcher: Optional[BaseRAGSearcher] = None,
         functions: Optional[List[Callable]] = None,
+        factory: Optional[BaseFactory] = None,
     ):
         """Base AI Agent.
 
@@ -49,6 +52,7 @@ class BaseAIAgent(BaseAIChat):
         self.searcher = searcher
         self.functions: Dict[Callable, Any] = {}
         self.function_names: Dict[str, Callable] = {}
+        self.factory = factory
         if functions:
             for f in functions:
                 self.add_function(f)
@@ -97,6 +101,8 @@ class BaseAIAgent(BaseAIChat):
         Returns:
             response: LLM response
         """
+        if message:
+            self.download_blobs(message)
         system_prompt = self._get_prompt()
         history = list(self.iter_messages())
         response = self.ai_model.get_chat_response(
@@ -107,6 +113,11 @@ class BaseAIAgent(BaseAIChat):
             functions=self.functions,
             interaction_logger=self._interaction_logger,
         )
+        if message and self.session:
+            # Clear blobs from history to save memory
+            interaction = self.session.get_last_interaction()
+            if interaction and interaction.message and interaction.message == message:
+                interaction.message.blobs = None
         return response
 
     def get_response(self, message: Optional[AIModelInteractionMessage | str] = None) -> AIChatResponse:
@@ -205,3 +216,19 @@ class BaseAIAgent(BaseAIChat):
             return None
         else:
             return self.searcher.agent_search_sync(system_prompt, history, message)
+
+    def download_blobs(self, message: AIModelInteractionMessage) -> None:
+        """Download blobs for the message using the factory.
+
+        Args:
+            message: The AIModelInteractionMessage containing blobs to download.
+        """
+        if message.blob_locations and not self.factory:
+            raise ValueError("Factory is not set for downloading blobs.")
+        if self.factory:
+            blobs = []
+            for blob_location in message.blob_locations:
+                blob = self.factory.download_blob(blob_location)
+                (blob_location.name)
+                blobs.append(blob)
+            message.blobs = blobs
