@@ -1,8 +1,7 @@
 import json
 import logging
 from abc import ABC
-from pathlib import Path
-from typing import Any, Callable, Iterator, List, Literal, Optional, TypeAlias
+from typing import Any, Callable, Iterator, List, Literal, Optional
 
 from haintech.ai.base.base_ai_model import BaseAIModel
 from haintech.ai.model import (
@@ -13,8 +12,6 @@ from haintech.ai.model import (
     AIModelSession,
     AIPrompt,
 )
-
-StrPath: TypeAlias = str | Path
 
 
 class BaseAIChat(ABC):

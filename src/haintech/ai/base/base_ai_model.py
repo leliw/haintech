@@ -118,7 +118,7 @@ class BaseAIModel(ABC):
                 if doc.url:
                     ret += f"URL: {doc.url}\n"
                 if doc.description:
-                    ret += f"Description: {doc.description}\n"  
+                    ret += f"Description: {doc.description}\n"
                 if doc.keywords:
                     ret += f"Keywords: {', '.join(doc.keywords)}\n"
                 if doc.metadata:
@@ -283,7 +283,6 @@ class BaseAIModel(ABC):
             except Exception as e:
                 print(f"Error preparing MCP tool definition: {e}")
                 raise e
-
 
     except ImportError:
         pass

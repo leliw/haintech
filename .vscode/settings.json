@@ -7,5 +7,6 @@
     "workbench.preferredLightColorTheme": "Solarized Light",
     "workbench.preferredDarkColorTheme": "Solarized Dark",
     "debugpy.debugJustMyCode": false,
-    "window.autoDetectColorScheme": true
+    "window.autoDetectColorScheme": true,
+    "ruff.lineLength": 120
 }
