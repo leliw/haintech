@@ -1,7 +1,7 @@
 import logging
 from typing import Callable, List, Optional
 
-from ampf.base import BaseAsyncFactory
+from haintech.ai.interfaces import AsyncSessionBlobManager
 
 from .base import BaseAIAgentAsync, BaseAIModel, BaseRAGSearcher
 from .model import (
@@ -32,7 +32,7 @@ try:
             session: Optional[AIModelSession] = None,
             searcher: Optional[BaseRAGSearcher] = None,
             functions: Optional[List[Callable]] = None,
-            factory: Optional[BaseAsyncFactory] = None,
+            session_blob_manager: Optional[AsyncSessionBlobManager] = None,
         ):
             """Initializes the MCPAIAgent.
 
@@ -55,7 +55,7 @@ try:
                 session=session,
                 searcher=searcher,
                 functions=functions,
-                factory=factory,
+                session_blob_manager=session_blob_manager,
             )
             self.mcp_servers = mcp_servers or []
 

@@ -12,7 +12,7 @@ async def test_get_response_with_blob_location(file_name: str):
     factory = LocalAsyncFactory("./tests/data")
     ai_model = GoogleAIModel("gemini-2.5-flash-lite", parameters=GoogleAIParameters(temperature=0))
     session = AIChatSession()
-    ai_agent = MCPAIAgent(ai_model=ai_model, mcp_servers=[], prompt="You are a helpful assistant.", session=session, factory=factory)
+    ai_agent = MCPAIAgent(ai_model=ai_model, mcp_servers=[], prompt="You are a helpful assistant.", session=session, session_blob_manager=factory)
     # And: A blob with answer
     blob_location = factory.create_blob_location(file_name)
     # When: Ask for a response

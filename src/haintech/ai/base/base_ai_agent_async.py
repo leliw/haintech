@@ -2,9 +2,8 @@ import asyncio
 import logging
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
-from ampf.base import BaseAsyncFactory
-
 from haintech.ai.ai_task_executor import AITaskExecutor
+from haintech.ai.interfaces import AsyncSessionBlobManager
 
 from ..model import (
     AIChatResponse,
@@ -33,7 +32,7 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         session: Optional[AIModelSession] = None,
         searcher: Optional[BaseRAGSearcher] = None,
         functions: Optional[List[Callable]] = None,
-        factory: Optional[BaseAsyncFactory] = None,
+        session_blob_manager: Optional[AsyncSessionBlobManager] = None,
     ):
         """Base AI Agent.
 
@@ -53,7 +52,7 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         self.searcher = searcher
         self.functions: Dict[Callable, Any] = {}
         self.function_names: Dict[str, Callable] = {}
-        self.factory = factory
+        self.session_blob_manager = session_blob_manager
         if functions:
             for f in functions:
                 self.add_function(f)
@@ -210,13 +209,13 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         Args:
             message: The AIModelInteractionMessage containing blobs to download.
         """
-        if message.blob_locations and not self.factory:
+        if message.blob_locations and not self.session_blob_manager:
             raise ValueError("Factory is not set for downloading blobs.")
         if not message.blob_locations:
             return
-        if self.factory:
+        if self.session_blob_manager:
             blobs = []
             for blob_location in message.blob_locations:
-                blob = await self.factory.download_blob(blob_location)
+                blob = await self.session_blob_manager.download_blob(blob_location)
                 blobs.append(blob)
             message.blobs = blobs

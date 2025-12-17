@@ -20,7 +20,7 @@ async def test_get_response_with_blob_location(ai_model: GoogleAIModel, file_nam
     factory = LocalAsyncFactory("./tests/data")
     session = AIChatSession()
     ai_agent = BaseAIAgentAsync(
-        ai_model=ai_model, system_prompt="You are a helpful assistant.", session=session, factory=factory
+        ai_model=ai_model, system_prompt="You are a helpful assistant.", session=session, session_blob_manager=factory
     )
     # And: A blob with answer
     blob_location = factory.create_blob_location(file_name)
