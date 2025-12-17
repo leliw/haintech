@@ -1,6 +1,8 @@
 import logging
 from typing import Callable, List, Optional
 
+from ampf.base import BaseAsyncFactory
+
 from .base import BaseAIAgentAsync, BaseAIModel, BaseRAGSearcher
 from .model import (
     AIModelSession,
@@ -30,6 +32,7 @@ try:
             session: Optional[AIModelSession] = None,
             searcher: Optional[BaseRAGSearcher] = None,
             functions: Optional[List[Callable]] = None,
+            factory: Optional[BaseAsyncFactory] = None,
         ):
             """Initializes the MCPAIAgent.
 
@@ -52,6 +55,7 @@ try:
                 session=session,
                 searcher=searcher,
                 functions=functions,
+                factory=factory,
             )
             self.mcp_servers = mcp_servers or []
 
