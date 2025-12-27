@@ -5,6 +5,7 @@ from haintech.ai.exceptions import UnsupportedMimeTypeError
 from haintech.ai.google_generativeai import GoogleAIModel, GoogleAIParameters
 from haintech.ai.model import AIModelInteractionMessage
 
+from google.generativeai.client import configure as genai_configure
 
 @pytest.fixture(
     params=[
@@ -17,6 +18,7 @@ from haintech.ai.model import AIModelInteractionMessage
     ]
 )
 def ai_model(request: pytest.FixtureRequest) -> GoogleAIModel:
+    genai_configure()
     return GoogleAIModel(request.param, parameters=GoogleAIParameters(temperature=0))
 
 

@@ -101,20 +101,13 @@ class OpenAIModel(BaseAIModel):
 
     def _prepare_parameters(
         self,
-        system_prompt: Optional[str | AIPrompt] = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        system_prompt: str | AIPrompt | None,
+        history: List[AIModelInteractionMessage],
         context: Optional[AIContext] = None,
         message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         response_format: Literal["text", "json"] = "text",
     ):
-        if not isinstance(history, list):
-            history = list(history or [])
-        if message:
-            if isinstance(message, str):
-                message = AIModelInteractionMessage(role="user", content=message)
-        else:
-            message = history.pop()
         msg_list = []
         if system_prompt:
             msg_list.append(
@@ -122,8 +115,15 @@ class OpenAIModel(BaseAIModel):
                     AIModelInteractionMessage(role="system", content=self._prompt_to_str(system_prompt))
                 )
             )
-        for m in history:
-            msg_list.append(self._create_message(m))
+        if not message:
+            message = history[-1]
+            for m in history[:-1]:
+                msg_list.append(self._create_message(m))
+        else:
+            for m in history:
+                msg_list.append(self._create_message(m))
+            if isinstance(message, str):
+                message = AIModelInteractionMessage(role="user", content=message)        
 
         if context:
             msg_list.append(

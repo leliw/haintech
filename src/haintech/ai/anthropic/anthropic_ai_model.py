@@ -49,6 +49,8 @@ class AnthropicAIModel(BaseAIModel):
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
+        if not isinstance(history, list):
+            history = list(history or [])
         parameters, ai_model_interaction = self._prepare_parameters(
             system_prompt, history, context, message, functions, response_format
         )
@@ -74,6 +76,8 @@ class AnthropicAIModel(BaseAIModel):
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
+        if not isinstance(history, list):
+            history = list(history or [])
         parameters, ai_model_interaction = self._prepare_parameters(
             system_prompt, history, context, message, functions, response_format
         )
@@ -90,22 +94,22 @@ class AnthropicAIModel(BaseAIModel):
 
     def _prepare_parameters(
         self,
-        system_prompt: Optional[str | AIPrompt] = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        system_prompt: str | AIPrompt | None,
+        history: List[AIModelInteractionMessage],
         context: Optional[AIContext] = None,
         message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         response_format: Literal["text", "json"] = "text",
     ):
         self._log.debug("Preparing parameters for Anthropic model")
-        if not isinstance(history, list):
-            history = list(history or [])
         if not message:
             if history:
-                message = history.pop()
+                message = history[-1]
+                msg_list = [self._create_message(m) for m in history[:-1]]
             else:
                 raise ValueError("No message provided")
-        msg_list = [self._create_message(m) for m in history]
+        else:
+            msg_list = [self._create_message(m) for m in history]
         if isinstance(message, str):
             message = AIModelInteractionMessage(role="user", content=message)
         msg_list.append(self._create_message(message, context))

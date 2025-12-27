@@ -108,21 +108,20 @@ class GoogleAIModel(BaseAIModel):
 
     def _prepare_parameters(
         self,
-        system_prompt: Optional[str | AIPrompt] = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[Dict[Callable, Any]] = None,
+        system_prompt: str | AIPrompt| None,
+        history: List[AIModelInteractionMessage],
+        context: AIContext | None,
+        message: AIModelInteractionMessage | None,
+        functions: Dict[Callable, Any] | None,
         response_format: Literal["text", "json"] = "text",
     ) -> Dict[str, Any]:
-        history = history or []
-        if not isinstance(history, list):
-            history = list(history)
         if not message:
-            message = history.pop()
-        elif isinstance(message, str):
-            message = AIModelInteractionMessage(role="user", content=message)
-        msg_list = (self._create_content_from_message(m) for m in history)
+            message = history[-1]
+            msg_list = (self._create_content_from_message(m) for m in history[:-1])
+        else:
+            msg_list = (self._create_content_from_message(m) for m in history)
+            if isinstance(message, str):
+                message = AIModelInteractionMessage(role="user", content=message)
         if system_prompt:
             msg = AIModelInteractionMessage(role="system", content=self._prompt_to_str(system_prompt))
             msg_list = chain([self._create_content_from_message(msg)], msg_list)

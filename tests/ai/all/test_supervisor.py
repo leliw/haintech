@@ -40,7 +40,7 @@ def test_agents_collaboration(ai_model: BaseAIModel):
     # And: The manager session contains 2 history item + message + response (user - assistant - tool - assistant )
     history = man_session.interactions[-1][1].history
     print(str(man_session))
-    assert 2 == len(history)
+    assert 3 == len(history)
 
 
 def test_supervisor_with_acceptance(
@@ -155,5 +155,5 @@ def test_agent_with_different_model(ai_model: BaseAIModel, agent_ai_model: BaseA
     assert 3 == len(man_session.interactions)
     # And: The manager session contains 2 history item + message + response (user - assistant - tool - assistant )
     history = man_session.interactions[-1][1].history
-    print(str(man_session))
-    assert 2 == len(history)
+    print(str(history))
+    assert 3 == len(history)
