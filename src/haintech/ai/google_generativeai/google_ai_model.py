@@ -220,8 +220,16 @@ class GoogleAIModel(BaseAIModel):
         if i_message.role == "tool":
             return cls._create_content_from_function_response(i_message)
         parts = [protos.Part(text=i_message.content)] if i_message.content else []
+        text_blob_contents = ""
         for blob in i_message.blobs or []:
-            parts.append(protos.Part(inline_data=protos.Blob(data=blob.content, mime_type=blob.content_type)))
+            if blob.content_type and blob.content_type.startswith("text/"):
+                text_blob_contents += f"\n<file {"name=\"" + blob.name + "\"" if blob.name else ""}>\n"
+                text_blob_contents += blob.content.decode("utf-8")
+                text_blob_contents += "\n</file>\n"
+            else:
+                parts.append(protos.Part(inline_data=protos.Blob(data=blob.content, mime_type=blob.content_type)))
+        if text_blob_contents:
+            parts.append(protos.Part(text=text_blob_contents))
         for f in cls._create_parts_from_tool_calls(i_message):
             parts.append(f)
         return protos.Content(

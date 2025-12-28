@@ -39,7 +39,7 @@ def test_get_chat_response(ai_model: GoogleAIModel):
     assert response.content and "Paris" in response.content
 
 
-@pytest.mark.parametrize("file_name", ["answer.txt", "answer.pdf", "answer.png"])
+@pytest.mark.parametrize("file_name", ["answer.pdf", "answer.png"])
 def test_get_chat_response_with_blob(file_name: str):
     # Given: Google AI Model
     ai_model = GoogleAIModel("gemini-2.5-flash-lite", parameters=GoogleAIParameters(temperature=0))
@@ -55,6 +55,20 @@ def test_get_chat_response_with_blob(file_name: str):
     # Then: The response contains the dog's breed from an answer blob
     assert response.content and "labrador" in response.content.lower()
 
+def test_get_chat_response_with_text_blob():
+    # Given: Google AI Model
+    ai_model = GoogleAIModel("gemini-2.5-flash-lite", parameters=GoogleAIParameters(temperature=0))
+    # And: A text blob with answer
+    blob_storage = LocalFactory("./tests/data").create_blob_storage("")
+    blob_storage.default_ext = None
+    blob = blob_storage.download("answer.txt")
+    # When: Ask for a response
+    response = ai_model.get_chat_response(
+        system_prompt="You are a helpful assistant.",
+        message=AIModelInteractionMessage(role="user", content="What is my dog's breed?", blobs=[blob]),
+    )
+    # Then: The response contains the dog's breed from an answer blob
+    assert response.content and "labrador" in response.content.lower()
 
 @pytest.mark.parametrize("file_name", ["answer.docx"])
 def test_get_chat_response_with_unsuported_blob(file_name: str):
