@@ -50,9 +50,14 @@ class GoogleAIModel(BaseAIModel):
             genai_configure(api_key=api_key)
             cls._configured = True
             _log.debug("Google AI Model configured")
-
-    def get_model_names(self) -> List[str]:
-        return [m.name for m in genai.list_models() if "generateContent" in m.supported_generation_methods]  # type: ignore
+    
+    @classmethod
+    def get_model_names(cls) -> List[str]:
+        ret = []
+        for m in genai.list_models(): # type: ignore
+            if "generateContent" in m.supported_generation_methods:
+                ret.append(m.name[7:] if m.name.startswith("models/") else m.name)
+        return ret
 
     @override
     def get_chat_response(
@@ -222,6 +227,7 @@ class GoogleAIModel(BaseAIModel):
         parts = [protos.Part(text=i_message.content)] if i_message.content else []
         text_blob_contents = ""
         for blob in i_message.blobs or []:
+            _log.warning("name=%s, type=%s", blob.name, blob.content_type)
             if blob.content_type and blob.content_type.startswith("text/"):
                 text_blob_contents += f"\n<file {"name=\"" + blob.name + "\"" if blob.name else ""}>\n"
                 text_blob_contents += blob.content.decode("utf-8")

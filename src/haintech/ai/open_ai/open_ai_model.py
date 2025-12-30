@@ -20,26 +20,36 @@ from ..model import (
 )
 from .model import OpenAIParameters
 
+_log = logging.getLogger(__name__)
+
 
 class OpenAIModel(BaseAIModel):
     """OpenAI implementation of BaseAIModel"""
 
-    _log = logging.getLogger(__name__)
+    _configured = False
+    @classmethod
+    def setup(cls):
+        if not cls._configured:
+            cls.openai = OpenAI()
+            cls.async_openai = AsyncOpenAI()
+            cls._configured = True
+            _log.debug("OpenAI AI Model configured")
 
     def __init__(
         self,
         model_name: str = "gpt-4o-mini",
         parameters: Optional[OpenAIParameters | Dict[str, Any]] = None,
     ):
-        self.openai = OpenAI()
-        self.async_openai = AsyncOpenAI()
+        self.setup()
         self.model_name = model_name
         if parameters and isinstance(parameters, dict):
             parameters = OpenAIParameters(**parameters)
         self.parameters = parameters or OpenAIParameters()
 
-    def get_model_names(self) -> List[str]:
-        return [m.id for m in self.openai.models.list().data] 
+    @classmethod
+    def get_model_names(cls) -> List[str]:
+        cls.setup()
+        return [m.id for m in cls.openai.models.list().data] 
     
     @override
     def get_chat_response(
@@ -62,7 +72,7 @@ class OpenAIModel(BaseAIModel):
             response = self._create_ai_chat_response(resp.choices[0].message)
             return response
         except Exception as e:
-            self._log.error("Error: %s", e)
+            _log.error("Error: %s", e)
             response = AIChatResponse(content=str(e))
             return response
         finally:
@@ -91,7 +101,7 @@ class OpenAIModel(BaseAIModel):
             response = self._create_ai_chat_response(resp.choices[0].message)
             return response
         except Exception as e:
-            self._log.error("Error: %s", e)
+            _log.error("Error: %s", e)
             response = AIChatResponse(content=str(e))
             return response
         finally:
@@ -183,7 +193,7 @@ class OpenAIModel(BaseAIModel):
                 }
                 for tool_call in interaction_message.tool_calls  # type: ignore
             ]
-        cls._log.debug("Creating message: %s", interaction_message)
+        _log.debug("Creating message: %s", interaction_message)
         return ret  # type: ignore
 
     @classmethod
