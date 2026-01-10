@@ -17,6 +17,8 @@ from .base_ai_chat_async import BaseAIChatAsync
 from .base_ai_model import BaseAIModel
 from .base_rag_searcher import BaseRAGSearcher
 
+_log = logging.getLogger(__name__)
+
 
 class BaseAIAgentAsync(BaseAIChatAsync):
     """Base AI Agent async version. It is AI Chat with tools."""
@@ -88,14 +90,20 @@ class BaseAIAgentAsync(BaseAIChatAsync):
             await self.download_blobs(message)
         system_prompt = self._get_prompt()
         history = list(self.iter_messages())
-        response = await self.ai_model.get_chat_response_async(
-            system_prompt=system_prompt,
-            history=history,
-            context=await self._get_context(system_prompt, history, message),
-            message=message,
-            functions=self.functions,
-            interaction_logger=self._interaction_logger,
-        )
+        try:
+            response = await self.ai_model.get_chat_response_async(
+                system_prompt=system_prompt,
+                history=history,
+                context=await self._get_context(system_prompt, history, message),
+                message=message,
+                functions=self.functions,
+                interaction_logger=self._interaction_logger,
+            )
+        except Exception as e:
+            _log.error(e)
+            _log.error(history)
+            _log.error(message)
+            raise e
         if message and self.session:
             # Clear blobs from history to save memory
             interaction = self.session.get_last_interaction()
@@ -209,6 +217,7 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         Args:
             message: The AIModelInteractionMessage containing blobs to download.
         """
+        _log.warning("Download blobs")
         if message.blob_locations and not self.session_blob_manager:
             raise ValueError("Factory is not set for downloading blobs.")
         if not message.blob_locations:
@@ -217,5 +226,6 @@ class BaseAIAgentAsync(BaseAIChatAsync):
             blobs = []
             for blob_location in message.blob_locations:
                 blob = await self.session_blob_manager.download_blob(blob_location)
+                _log.warning("name=%s, type=%s", blob.name, blob.content_type)
                 blobs.append(blob)
             message.blobs = blobs
