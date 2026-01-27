@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, Iterator, List, Optional, Tuple, override
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from ampf.base import Blob, BlobLocation
 
 
@@ -132,7 +132,21 @@ class AIModelInteraction[T: AIModelInteractionMessage](BaseModel):
     prompt: Optional[str | AIPrompt] = None
     history: List[T]
     message: Optional[T] = None
-    response: Optional[AIChatResponse] = None
+    response: Optional[AIChatResponse] = Field(default=None, exclude=True)
+    response_message: Optional[T] = None
+
+    model_config = ConfigDict(validate_assignment=True)
+
+    @model_validator(mode='after')
+    def populate_response_message(self):
+        if not self.response_message and self.response:
+            if self.message:
+                self.response_message = self.message.create_from_response(self.response)
+            elif self.history:
+                self.response_message = self.history[-1].create_from_response(self.response)
+            else:
+                raise ValueError("Neither message nor history provided")
+        return self
 
 
 class AIModelSession[T: AIModelInteractionMessage](ABC):
@@ -153,13 +167,14 @@ class AIModelSession[T: AIModelInteractionMessage](ABC):
         """Itrerates over all messages (from last interaction)."""
         pass
 
-    def get_last_response(self) -> Optional[AIChatResponse]:
+    def get_last_response(self) -> Optional[T]:
         """Get last response."""
         last_interaction = self.get_last_interaction()
         if last_interaction:
-            return last_interaction.response
+            return last_interaction.response_message
         return None
 
+    # TODO: Remove this method
     @classmethod
     def create_message_from_response(cls, response: AIChatResponse) -> T:
         return AIModelInteractionMessage.create_from_response(response)  # type: ignore
@@ -185,10 +200,9 @@ class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
                 yield message
             if last_interaction.message:
                 yield last_interaction.message
-                clazz = last_interaction.message.__class__
                 last_response = self.get_last_response()
                 if last_response:
-                    yield clazz.create_from_response(last_response)
+                    yield last_response
 
     def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
         """Get last interaction."""
@@ -207,10 +221,9 @@ class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
         for m in self.messages_iterator():
             ret += str(m) + "\n"
         if m:
-            clazz = m.__class__
             last_response = self.get_last_response()
             if last_response:
-                ret += str(clazz.create_from_response(last_response)) + "\n"
+                ret += str(last_response) + "\n"
         return ret
 
 
@@ -239,12 +252,12 @@ class AISupervisorSession[T: AIModelInteractionMessage](BaseModel, AIModelSessio
         return None
 
     @override
-    def get_last_response(self) -> Optional[AIChatResponse]:
+    def get_last_response(self) -> Optional[T]:
         """Get last response."""
         if self.interactions:
             for agent_name, interaction in reversed(self.interactions):
                 if agent_name == self.agent_name:
-                    return interaction.response
+                    return interaction.response_message
         return None
 
     @override
@@ -265,10 +278,9 @@ class AISupervisorSession[T: AIModelInteractionMessage](BaseModel, AIModelSessio
         for m in self.messages_iterator():
             ret += str(m) + "\n"
         if m:
-            clazz = m.__class__
             last_response = self.get_last_response()
             if last_response:
-                ret += str(clazz.create_from_response(last_response)) + "\n"
+                ret += str(last_response) + "\n"
         return ret
 
 

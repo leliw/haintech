@@ -11,14 +11,17 @@ from google.generativeai.generative_models import ChatSession, GenerativeModel
 from google.generativeai.types import GenerationConfig, generation_types
 
 from haintech.ai.exceptions import UnsupportedMimeTypeError
-from haintech.ai.model import AIFunction, AIModelToolCall, AIPrompt, RAGItem
 
 from ..base import BaseAIModel
 from ..model import (
     AIChatResponse,
     AIContext,
+    AIFunction,
     AIModelInteraction,
     AIModelInteractionMessage,
+    AIModelToolCall,
+    AIPrompt,
+    RAGItem,
 )
 
 _log = logging.getLogger(__name__)
@@ -50,11 +53,11 @@ class GoogleAIModel(BaseAIModel):
             genai_configure(api_key=api_key)
             cls._configured = True
             _log.debug("Google AI Model configured")
-    
+
     @classmethod
     def get_model_names(cls) -> List[str]:
         ret = []
-        for m in genai.list_models(): # type: ignore
+        for m in genai.list_models():  # type: ignore
             if "generateContent" in m.supported_generation_methods:
                 ret.append(m.name[7:] if m.name.startswith("models/") else m.name)
         return ret
@@ -113,7 +116,7 @@ class GoogleAIModel(BaseAIModel):
 
     def _prepare_parameters(
         self,
-        system_prompt: str | AIPrompt| None,
+        system_prompt: str | AIPrompt | None,
         history: List[AIModelInteractionMessage],
         context: AIContext | None,
         message: AIModelInteractionMessage | None,
@@ -184,6 +187,7 @@ class GoogleAIModel(BaseAIModel):
                 raise UnsupportedMimeTypeError()
             else:
                 raise e
+
     @classmethod
     def _prompt_to_str(cls, prompt: str | AIPrompt) -> str:
         if isinstance(prompt, str):
@@ -229,7 +233,7 @@ class GoogleAIModel(BaseAIModel):
         for blob in i_message.blobs or []:
             _log.warning("name=%s, type=%s", blob.name, blob.content_type)
             if blob.content_type and blob.content_type.startswith("text/"):
-                text_blob_contents += f"\n<file {"name=\"" + blob.name + "\"" if blob.name else ""}>\n"
+                text_blob_contents += f"\n<file {'name="' + blob.name + '"' if blob.name else ''}>\n"
                 text_blob_contents += blob.content.decode("utf-8")
                 text_blob_contents += "\n</file>\n"
             else:
@@ -404,7 +408,7 @@ class GoogleAIModel(BaseAIModel):
                     case _:
                         type = protos.Type.STRING
                 parameters.properties[param_name] = protos.Schema(type=type)
-            parameters.required = tool.inputSchema["required"] if "required" in tool.inputSchema else [] 
+            parameters.required = tool.inputSchema["required"] if "required" in tool.inputSchema else []
             return protos.FunctionDeclaration(
                 name=tool.name,
                 description=tool.description,
