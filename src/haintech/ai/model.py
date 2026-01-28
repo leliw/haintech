@@ -62,7 +62,8 @@ class AIChatResponse(BaseModel):
 
 class AIModelInteractionMessage(BaseModel):
     """One message within AIModelInteraction"""
-
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    
     role: str
     name: Optional[str] = None
     tool_call_id: Optional[str] = None  # Only for role=tool

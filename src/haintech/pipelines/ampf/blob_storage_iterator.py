@@ -1,13 +1,12 @@
 from typing import AsyncIterator, Callable, Iterator, Optional, override
 
-from ampf.base import BaseAsyncBlobStorage, Blob
-from pydantic import BaseModel
+from ampf.base import BaseAsyncBlobStorage, Blob, BaseBlobMetadata
 
 from ..base_flat_map_processor import BaseProcessor
 from ..progress_tracker import ProgressTracker
 
 
-class BlobStorageIterator[I, M: BaseModel](BaseProcessor[I, Blob[M]]):
+class BlobStorageIterator[I, M: BaseBlobMetadata](BaseProcessor[I, Blob[M]]):
     def __init__(
         self,
         storage: BaseAsyncBlobStorage[M] | Callable[[I], BaseAsyncBlobStorage[M]],
@@ -49,7 +48,7 @@ class BlobStorageIterator[I, M: BaseModel](BaseProcessor[I, Blob[M]]):
             storage = self.storage(data)
         else:
             storage = self.storage
-        blob_headers = storage.list_blobs()
+        blob_headers = list([bh async for bh in storage.list_blobs()])
         if self.progress_tracker:
             self.progress_tracker.set_total_steps(len(blob_headers))
         for header in blob_headers:

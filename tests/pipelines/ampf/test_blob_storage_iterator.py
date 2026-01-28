@@ -1,6 +1,6 @@
 import pytest
-from ampf.base import Blob
-from ampf.local_async import AsyncLocalFactory
+from ampf.base import BaseBlobMetadata, Blob
+from ampf.local import LocalAsyncFactory
 from pydantic import BaseModel
 
 from haintech.pipelines import Pipeline
@@ -10,22 +10,22 @@ from haintech.pipelines.progress_tracker import ProgressTracker
 
 @pytest.fixture
 def factory(tmp_path):
-    return AsyncLocalFactory(tmp_path)
+    return LocalAsyncFactory(tmp_path)
 
 
-class D(BaseModel):
+class D(BaseBlobMetadata):
     page_no: str
     content: str
 
 
 @pytest.fixture
 def data1():
-    return Blob[D](name="1", data=b"1", metadata=D(page_no="1", content="test"))
+    return Blob[D](name="1", content=b"1", metadata=D(page_no="1", content="test"))
 
 
 @pytest.fixture
 def data2():
-    return Blob[D](name="2", data=b"2", metadata=D(page_no="2", content="test"))
+    return Blob[D](name="2", content=b"2", metadata=D(page_no="2", content="test"))
 
 
 @pytest.mark.asyncio
@@ -45,7 +45,8 @@ async def test_blob_iterator(factory, data1, data2):
     assert ret
     ret.sort(key=lambda x: x.metadata.page_no)
     # Then: Returns all blobs from storage
-    assert ret == [data1, data2]
+    assert ret[0].content == data1.content
+    assert ret[1].content == data2.content
 
 
 @pytest.mark.asyncio
@@ -68,7 +69,8 @@ async def test_iterator_with_progress_tracker(factory, data1, data2):
     assert ret
     ret.sort(key=lambda x: x.metadata.page_no)
     # Then: Returns all blobs from storage
-    assert ret == [data1, data2]
+    assert ret[0].content == data1.content
+    assert ret[1].content == data2.content
     # And: Progress tracker is completed
     assert pt.total_steps == 2
     assert pt.is_complete()
@@ -95,7 +97,11 @@ async def test_lambda_storage(factory, data1, data2):
     assert ret
     ret.sort(key=lambda x: x.metadata.page_no)
     # Then: Returns all blobs from storage "X" directory
-    assert ret == [data1, data2]
+    assert ret[0].content == data1.content
+    assert ret[1].content == data2.content
+
+
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

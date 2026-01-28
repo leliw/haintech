@@ -1,13 +1,12 @@
 import pytest
-from ampf.base import Blob
+from ampf.base import Blob, BaseBlobMetadata
 from ampf.in_memory import InMemoryAsyncFactory
-from pydantic import BaseModel
 
 from haintech.pipelines import Pipeline
 from haintech.pipelines.ampf import BlobStorageWriter
 
 
-class D(BaseModel):
+class D(BaseBlobMetadata):
     page_no: int
     content: str
 
@@ -33,11 +32,10 @@ async def test_pipe_file_name_key(factory, metadata):
         ]
     )
     # When: Run pipeline with blob and metadata
-    await pl.run_and_return([Blob(name="1", data=b"test", metadata=metadata)])
+    await pl.run_and_return([Blob(name="1", content=b"test", metadata=metadata)])
     # Then: Blob and metadata are uploaded
-    blobs = list(storage.list_blobs())
+    blobs = list([b async for b in storage.list_blobs()])
     assert len(blobs) == 1
     assert blobs[0].name == "1"
     blob = await storage.download_async(blobs[0].name)
-    assert  blob.data.getvalue() == b"test"
-
+    assert blob.content == b"test"
