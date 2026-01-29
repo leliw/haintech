@@ -69,7 +69,7 @@ class AIModelInteractionMessage(BaseModel):
     tool_call_id: Optional[str] = None  # Only for role=tool
     content: Optional[str] = None
     blob_locations: List[BlobLocation] = Field(default_factory=list)
-    blobs: Optional[List[Blob]] = None
+    blobs: Optional[List[Blob]] = Field(exclude=True, repr=False, default_factory=list)
     tool_calls: Optional[List[AIModelToolCall]] = None
 
     @classmethod
