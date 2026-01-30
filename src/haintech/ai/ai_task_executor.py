@@ -1,9 +1,9 @@
 import json
 import logging
-from typing import Dict, List, Literal
+from typing import Callable, Dict, List, Literal, Optional
 
 from .base.base_ai_model import BaseAIModel
-from .model import AIModelInteractionMessage, AIPrompt, AITask
+from .model import AIModelInteraction, AIModelInteractionMessage, AIPrompt, AITask
 
 
 class AITaskExecutor:
@@ -20,6 +20,7 @@ class AITaskExecutor:
         system_instructions: AIPrompt | str,
         prompt: str,
         response_format: Literal["text", "json"] = "text",
+        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
     ):
         """Initialize AI task executor.
 
@@ -32,6 +33,8 @@ class AITaskExecutor:
         self.system_instructions = system_instructions
         self.prompt = prompt
         self.response_format = response_format
+        self.interaction_logger = interaction_logger
+
 
     def execute(self, **kwargs) -> str | Dict | List:
         """Execute task.
@@ -45,6 +48,7 @@ class AITaskExecutor:
             system_prompt=self.system_instructions,
             message=self._prepare_message(**kwargs),
             response_format=self.response_format, # type: ignore
+            interaction_logger=self.interaction_logger,
         )
         return self._prepare_response(m_resp)
 
@@ -60,6 +64,7 @@ class AITaskExecutor:
             system_prompt=self.system_instructions,
             message=self._prepare_message(**kwargs),
             response_format=self.response_format, # type: ignore
+            interaction_logger=self.interaction_logger,
         )
         return self._prepare_response(m_resp)
 
