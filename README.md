@@ -3,7 +3,6 @@
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 
 A utility package for AI solutions.
-There are two packages:
 
 * [ai](doc/ai.md) - abstraction layer and utilities for LLMs:
   * OpenAI
@@ -11,6 +10,7 @@ There are two packages:
   * DeepSeek
   * Anthropic
 * [pipelines](doc/pipelines.md) - framework for buiding pipelines
+* [testing](doc/testing.md) - package with testing utitlities
 
 ## Build and publish
 

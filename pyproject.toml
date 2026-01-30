@@ -1,6 +1,6 @@
 [project]
 name = "haintech"
-version = "0.4.7"
+version = "0.5.2"
 license = "MIT"
 description = "Add your description here"
 readme = "README.md"
@@ -15,6 +15,9 @@ dependencies = [
     "openai>=1.68.2",
     "pydantic>=2.10.6",
 ]
+
+[project.entry-points.pytest11]
+haintech = "haintech.testing.plugin"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

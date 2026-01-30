@@ -1,17 +1,18 @@
 from .base import (
+    BaseAgentSearcher,
     BaseAIAgent,
     BaseAIAgentAsync,
     BaseAIChat,
     BaseAIChatAsync,
     BaseAIModel,
     BaseAISupervisor,
-    BaseRAGSearcher,
-    BaseAgentSearcher,
     BaseAITextEmbeddingModel,
+    BaseRAGSearcher,
 )
 from .model import (
     AIChatResponse,
     AIChatSession,
+    AIContext,
     AIFunction,
     AIFunctionParameter,
     AIModelInteraction,
@@ -19,14 +20,16 @@ from .model import (
     AIModelSession,
     AIModelToolCall,
     AIPrompt,
-    AIContext,
     AISupervisorSession,
     AITask,
     RAGItem,
     RAGQuery,
 )
 from .ai_task_executor import AITaskExecutor
-from .mcp_ai_agent import MCPAIAgent
+try:
+    from .mcp_ai_agent import MCPAIAgent
+except ImportError:
+    pass
 
 
 __all__ = [
