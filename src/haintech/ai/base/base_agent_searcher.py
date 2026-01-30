@@ -1,25 +1,30 @@
 import logging
-from typing import List
+from typing import Callable, List, Optional
 
 from haintech.ai.ai_task_executor import AITaskExecutor
 from haintech.ai.base.base_ai_model import BaseAIModel
 from haintech.ai.base.base_rag_searcher import BaseRAGSearcher
-from haintech.ai.model import AIContext, AIModelInteractionMessage, AIPrompt, RAGQuery
+from haintech.ai.model import AIContext, AIModelInteraction, AIModelInteractionMessage, AIPrompt, RAGQuery
+
+_log = logging.getLogger(__name__)
 
 
 class BaseAgentSearcher(BaseRAGSearcher):
     """Agent-based RAG searcher. It uses AI model to generate search query."""
-
-    _log = logging.getLogger(__name__)
 
     def __init__(
         self,
         ai_model: BaseAIModel,
         system_instructions: str = "Task: Based on the system description, conversation, and user question, generate one short search query for document retrieval.",
         prompt: str = "Input:\nSystem: {system_prompt}\nHistory: {conversation_history}\nQuestion: {user_question}\n\nOutput:\nOnly one query between 20 and 100 tokens, no comments or markdown.",
+        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
     ):
         self.ai_task_executor = AITaskExecutor(
-            ai_model=ai_model, system_instructions=system_instructions, prompt=prompt, response_format="text"
+            ai_model=ai_model,
+            system_instructions=system_instructions,
+            prompt=prompt,
+            response_format="text",
+            interaction_logger=interaction_logger,
         )
 
     def agent_search_sync(

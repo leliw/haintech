@@ -9,6 +9,7 @@ Arguments:
 * ai_model: [BaseAIModel](ai_base_ai_model.md) - AI model class implementing `BaseAIModel()`. It shuld be cheap model like `gpt-4.1-nano` or `gemini-2.5-flash-lite`
 * system_instructions: str = "Task: Based on the system description, conversation, and user question, generate one short search query for document retrieval."
 * prompt: str = "Input:\nSystem: {system_prompt}\nHistory: {conversation_history}\nQuestion: {user_question}\n\nOutput:\nOnly one query between 20 and 100 tokens, no comments or markdown."
+* interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None
 
 ## Methods
 

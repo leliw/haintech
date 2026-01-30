@@ -9,6 +9,7 @@ Arguments:
 * ai_model: AI model.
 * system_instructions: System instructions.
 * prompt: Prompt (f-string)
+* interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None
 
 ## Methods
 
@@ -61,4 +62,16 @@ te = AITaskExecutor(
 ret = te.execute(prompt="Zarządzanie użytkownikami")
 assert isinstance(ret, str)
 assert "users" == ret
+```
+
+### Store interaction in a session
+
+```python
+    session = AISupervisorSession()
+    te = AITaskExecutor(
+        ai_model=GoogleAIModel(parameters={"temperature": 0}),
+        system_instructions="You are helpful assistant.",
+        prompt="{prompt}",
+        interaction_logger=session.create_agent_session("TaskExecutor").add_interaction
+    )
 ```
