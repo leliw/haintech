@@ -1,7 +1,7 @@
 import pytest
 
 from haintech.ai import (
-    AISupervisorSession,
+    AIMultiagentSession,
     BaseAIAgent,
     BaseAIModel,
     BaseAISupervisor,
@@ -24,7 +24,7 @@ def test_agents_collaboration(ai_model: BaseAIModel):
         description="Geographer assistant. Answer any question about geography.",
         system_prompt="You are a helpful geographer assistant.",
     )
-    man_session = AISupervisorSession()
+    man_session = AIMultiagentSession()
     man_agent = BaseAISupervisor(
         ai_model=ai_model,
         system_prompt="You are a helpful assistant.",
@@ -38,7 +38,7 @@ def test_agents_collaboration(ai_model: BaseAIModel):
     # And: There were 3 interactions (manager - historian - manager)
     assert 3 == len(man_session.interactions)
     # And: The manager session contains 2 history item + message + response (user - assistant - tool - assistant )
-    history = man_session.interactions[-1][1].history
+    history = man_session.interactions[-1].interaction.history
     print(str(man_session))
     assert 3 == len(history)
 
@@ -46,7 +46,7 @@ def test_agents_collaboration(ai_model: BaseAIModel):
 def test_supervisor_with_acceptance(
     ai_model: BaseAIModel,
     hr_agent: BaseAIAgent,
-    tm_session: AISupervisorSession,
+    tm_session: AIMultiagentSession,
 ):
     # STEP: 1
     # =======
@@ -86,7 +86,7 @@ def test_supervisor_with_acceptance(
 def test_supervisor_with_without_acceptance_agent_call(
     ai_model: BaseAIModel,
     hr_agent: BaseAIAgent,
-    tm_session: AISupervisorSession,
+    tm_session: AIMultiagentSession,
 ):
     # STEP: 1
     # =======
@@ -140,7 +140,7 @@ def test_agent_with_different_model(ai_model: BaseAIModel, agent_ai_model: BaseA
         description="Geographer assistant. Answer any question about geography.",
         system_prompt="You are a helpful geographer assistant.",
     )
-    man_session = AISupervisorSession()
+    man_session = AIMultiagentSession()
     man_agent = BaseAISupervisor(
         ai_model=ai_model,
         system_prompt="You are a helpful assistant.",
@@ -154,6 +154,6 @@ def test_agent_with_different_model(ai_model: BaseAIModel, agent_ai_model: BaseA
     # And: There were 3 interactions (manager - historian - manager)
     assert 3 == len(man_session.interactions)
     # And: The manager session contains 2 history item + message + response (user - assistant - tool - assistant )
-    history = man_session.interactions[-1][1].history
+    history = man_session.interactions[-1].interaction.history
     print(str(history))
     assert 3 == len(history)

@@ -4,7 +4,7 @@ from haintech.ai.ai_task_executor import AITaskExecutor
 from haintech.ai.base.base_ai_model import BaseAIModel
 from haintech.ai.deep_seek import DeepSeekAIModel
 from haintech.ai.google_generativeai import GoogleAIModel
-from haintech.ai.model import AIFunctionParameter, AIPrompt, AISupervisorSession, AITask
+from haintech.ai.model import AIFunctionParameter, AIPrompt, AIMultiagentSession, AITask
 from haintech.ai.open_ai import OpenAIModel
 from haintech.testing.mocker_ai_model import MockerAIModel, mocker_ai_model  # noqa: F401
 
@@ -141,7 +141,7 @@ def test_session(mocker_ai_model: MockerAIModel):  # noqa: F811
         response="George Washington.",
     )
     # Given: AITaskExecutor with sesion
-    session = AISupervisorSession()
+    session = AIMultiagentSession()
     te = AITaskExecutor(
         ai_model=GoogleAIModel(parameters={"temperature": 0}),
         system_instructions="You are helpful assistant.",
@@ -151,8 +151,8 @@ def test_session(mocker_ai_model: MockerAIModel):  # noqa: F811
     # When: Execute
     te.execute(prompt="Who was the first US president?")
     # Then: The session is updated
-    assert session.interactions[0][0] == "TaskExecutor"
-    assert session.interactions[0][1].message
-    assert session.interactions[0][1].message.content == "Who was the first US president?"
-    assert session.interactions[0][1].response
-    assert session.interactions[0][1].response.content == "George Washington."
+    assert session.interactions[0].agent_name == "TaskExecutor"
+    assert session.interactions[0].interaction.message
+    assert session.interactions[0].interaction.message.content == "Who was the first US president?"
+    assert session.interactions[0].interaction.response
+    assert session.interactions[0].interaction.response.content == "George Washington."

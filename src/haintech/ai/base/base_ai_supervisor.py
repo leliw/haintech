@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, List, Optional
 from haintech.ai.base.base_ai_agent import BaseAIAgent
 from haintech.ai.base.base_ai_model import BaseAIModel
 from haintech.ai.base.base_rag_searcher import BaseRAGSearcher
-from haintech.ai.model import AIChatResponse, AISupervisorSession
+from haintech.ai.model import AIChatResponse, AIMultiagentSession
 
 
 class BaseAISupervisor(BaseAIAgent):
@@ -15,7 +15,7 @@ class BaseAISupervisor(BaseAIAgent):
         name: Optional[str] = None,
         description: Optional[str] = None,
         system_prompt: Optional[str] = None,
-        session: Optional[AISupervisorSession] = None,
+        session: Optional[AIMultiagentSession] = None,
         searcher: Optional[BaseRAGSearcher] = None,
         functions: Optional[List[Callable]] = None,
         agents: Optional[List[BaseAIAgent]] = None,
@@ -29,7 +29,7 @@ class BaseAISupervisor(BaseAIAgent):
             searcher=searcher,
             functions=functions,
         )
-        self.session: Optional[AISupervisorSession] = session
+        self.session: Optional[AIMultiagentSession] = session
         self.agents: Dict[str, BaseAIAgent] = {}
         if agents:
             for agent in agents:

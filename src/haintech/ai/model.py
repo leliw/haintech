@@ -1,7 +1,7 @@
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, Iterator, List, Optional, Tuple, override
+from typing import Any, Dict, Iterator, List, Optional, override
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from ampf.base import Blob, BlobLocation
@@ -62,8 +62,9 @@ class AIChatResponse(BaseModel):
 
 class AIModelInteractionMessage(BaseModel):
     """One message within AIModelInteraction"""
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    
+
     role: str
     name: Optional[str] = None
     tool_call_id: Optional[str] = None  # Only for role=tool
@@ -138,7 +139,7 @@ class AIModelInteraction[T: AIModelInteractionMessage](BaseModel):
 
     model_config = ConfigDict(validate_assignment=True)
 
-    @model_validator(mode='after')
+    @model_validator(mode="after")
     def populate_response_message(self):
         if not self.response_message and self.response:
             if self.message:
@@ -228,49 +229,95 @@ class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
         return ret
 
 
-class AISupervisorSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
-    """Supervisor session model. It can create agent sessions."""
-
-    uid: str = Field(default_factory=lambda: uuid.uuid4().hex)
-    datetime: str = Field(default_factory=lambda: str(datetime.now()))
-    interactions: List[Tuple[str | None, AIModelInteraction[T]]] = Field(default_factory=list)
+class AIAgentInteraction[T: AIModelInteractionMessage](BaseModel):
     agent_name: Optional[str] = None
+    interaction: AIModelInteraction[T]
 
-    def create_agent_session(self, agent_name: str) -> AIModelSession[T]:
-        """Create agent session."""
-        return AIAgentSession(agent_name=agent_name, interactions=self.interactions)
+
+class AIAgentSession[T: AIModelInteractionMessage](AIModelSession[T]):
+    """Agent session model.
+
+    It links to supervisor session.
+    All methods operate on supervisor session interactions
+    with the agent name differentiator.
+    """
+
+    def __init__(self, agent_name: str, interactions: List[AIAgentInteraction]):
+        self.agent_name = agent_name
+        self.interactions = interactions
 
     @override
     def add_interaction(self, interaction: AIModelInteraction[T]):
-        self.interactions.append((self.agent_name, interaction))
-
-    def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
-        """Get last interaction."""
-        if self.interactions:
-            for agent_name, interaction in reversed(self.interactions):
-                if agent_name == self.agent_name:
-                    return interaction
-        return None
+        self.interactions.append(AIAgentInteraction(agent_name=self.agent_name, interaction=interaction))
 
     @override
-    def get_last_response(self) -> Optional[T]:
+    def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
         """Get last response."""
         if self.interactions:
-            for agent_name, interaction in reversed(self.interactions):
-                if agent_name == self.agent_name:
-                    return interaction.response_message
+            for i in reversed(self.interactions):
+                if i.agent_name == self.agent_name:
+                    return i.interaction
         return None
 
     @override
     def messages_iterator(self) -> Iterator[T]:
         """Itrerates over all messages (from last interaction)"""
         if self.interactions:
-            for agent_name, interaction in reversed(self.interactions):
-                if agent_name == self.agent_name:
-                    for message in interaction.history:
+            for i in reversed(self.interactions):
+                if i.agent_name == self.agent_name:
+                    for message in i.interaction.history:
                         yield message
-                    if interaction.message:
-                        yield interaction.message
+                    if i.interaction.message:
+                        yield i.interaction.message
+                    if i.interaction.response_message:
+                        yield i.interaction.response_message
+                    # I've found the last iteration for the agent
+                    return
+
+
+class AIMultiagentSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
+    """Supervisor session model. It can create agent sessions."""
+
+    interactions: List[AIAgentInteraction[T]] = Field(default_factory=list)
+    agent_name: Optional[str] = None
+
+    def create_agent_session(self, agent_name: str) -> AIModelSession[T]:
+        """Create agent session."""
+        return AIAgentSession[T](agent_name=agent_name, interactions=self.interactions)
+
+    @override
+    def add_interaction(self, interaction: AIModelInteraction[T]):
+        self.interactions.append(AIAgentInteraction[T](agent_name=self.agent_name, interaction=interaction))
+
+    def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
+        """Get last interaction."""
+        if self.interactions:
+            for i in reversed(self.interactions):
+                if i.agent_name == self.agent_name:
+                    return i.interaction
+        return None
+
+    @override
+    def get_last_response(self) -> Optional[T]:
+        """Get last response."""
+        if self.interactions:
+            for i in reversed(self.interactions):
+                if i.agent_name == self.agent_name:
+                    return i.interaction.response_message
+        return None
+
+    @override
+    def messages_iterator(self) -> Iterator[T]:
+        """Itrerates over all messages (from last interaction)"""
+        if self.interactions:
+            for i in reversed(self.interactions):
+                if i.agent_name == self.agent_name:
+                    for message in i.interaction.history:
+                        yield message
+                    if i.interaction.message:
+                        yield i.interaction.message
+                    if i.interaction.response_message:
+                        yield i.interaction.response_message
                     # I've found the last iteration for the agent
                     return
 
@@ -283,45 +330,6 @@ class AISupervisorSession[T: AIModelInteractionMessage](BaseModel, AIModelSessio
             if last_response:
                 ret += str(last_response) + "\n"
         return ret
-
-
-class AIAgentSession[T: AIModelInteractionMessage](AIModelSession[T]):
-    """Agent session model.
-
-    It links to supervisor session.
-    All methods operate on supervisor session interactions
-    with the agent name differentiator.
-    """
-
-    def __init__(self, agent_name: str, interactions: List[Tuple[str | None, AIModelInteraction[T]]]):
-        self.agent_name = agent_name
-        self.interactions = interactions
-
-    @override
-    def add_interaction(self, interaction: AIModelInteraction[T]):
-        self.interactions.append((self.agent_name, interaction))
-
-    @override
-    def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
-        """Get last response."""
-        if self.interactions:
-            for agent_name, interaction in reversed(self.interactions):
-                if agent_name == self.agent_name:
-                    return interaction
-        return None
-
-    @override
-    def messages_iterator(self) -> Iterator[T]:
-        """Itrerates over all messages (from last interaction)"""
-        if self.interactions:
-            for agent_name, interaction in reversed(self.interactions):
-                if agent_name == self.agent_name:
-                    for message in interaction.history:
-                        yield message
-                    if interaction.message:
-                        yield interaction.message
-                    # I've found the last iteration for the agent
-                    return
 
 
 class AIFunctionParameter(BaseModel):

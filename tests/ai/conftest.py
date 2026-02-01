@@ -4,14 +4,14 @@ from typing import Iterator
 import pytest
 from ampf.local import LocalFactory
 
-from haintech.ai.model import AIChatSession, AISupervisorSession
+from haintech.ai.model import AIChatSession, AIMultiagentSession
 
 
 @pytest.fixture
-def tm_session() -> Iterator[AISupervisorSession]:
+def tm_session() -> Iterator[AIMultiagentSession]:
     factory = LocalFactory("./tests/data/test_sessions")
-    storage = factory.create_storage("ai_log", AISupervisorSession, "datetime")
-    session = AISupervisorSession()
+    storage = factory.create_storage("ai_log", AIMultiagentSession, "datetime")
+    session = AIMultiagentSession()
     yield session
     # storage.save(session)
     # storage.drop()
@@ -20,7 +20,7 @@ def tm_session() -> Iterator[AISupervisorSession]:
 @pytest.fixture
 def ch_session() -> Iterator[AIChatSession]:
     factory = LocalFactory("./tests/data/test_sessions")
-    storage = factory.create_storage("ai_log", AISupervisorSession, "datetime")
+    storage = factory.create_storage("ai_log", AIMultiagentSession, "datetime")
     session = AIChatSession()
     yield session
     # storage.save(session)
