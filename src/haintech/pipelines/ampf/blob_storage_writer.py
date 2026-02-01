@@ -1,9 +1,12 @@
+import logging
 from typing import Callable, Optional, override
 
 from ampf.base import Blob, BaseAsyncBlobStorage, BaseBlobMetadata
 
 from ..base_processor import BaseProcessor, FieldNameOrLambda, FieldNameOrLambda2
 from ..progress_tracker import ProgressTracker
+
+_log = logging.getLogger(__name__)
 
 
 class BlobStorageWriter[M: BaseBlobMetadata](BaseProcessor[Blob[M], Blob[M]]):
@@ -24,4 +27,4 @@ class BlobStorageWriter[M: BaseBlobMetadata](BaseProcessor[Blob[M], Blob[M]]):
     @override
     async def process_item(self, item: Blob[M]) -> Blob[M]:
         await self.storage.upload_async(item)
-        return item
+        return await self.storage.download_async(item.name)       
