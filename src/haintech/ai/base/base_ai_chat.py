@@ -66,7 +66,7 @@ class BaseAIChat(ABC):
         """
         response = self.ai_model.get_chat_response(
             message=message,
-            system_prompt=self._get_prompt(),
+            system_prompt=self.system_prompt,
             history=self.iter_messages(),
             interaction_logger=self._interaction_logger,
             response_format=response_format,
@@ -104,16 +104,6 @@ class BaseAIChat(ABC):
         """
         for message in self.history:
             yield message
-
-    def _get_prompt(self) -> str | AIPrompt | None:
-        """Returns system prompt for LLM (self.system_prompt).
-
-        It can be overriden to return dynamic prompt.
-        """
-
-        if self.system_prompt and isinstance(self.system_prompt, AIPrompt):
-            return self.system_prompt
-        return AIPrompt(context=self.system_prompt) if self.system_prompt else None
 
     def set_interaction_logger(self, logger: Callable[[AIModelInteraction], None]):
         self._interaction_logger = logger
@@ -172,4 +162,3 @@ class BaseAIChat(ABC):
             self._log.warning(e)
             self._log.warning("JSON content: %s", m_resp.content)
             raise e
-

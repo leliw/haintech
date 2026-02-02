@@ -40,6 +40,7 @@ _log = logging.getLogger(__name__)
 
 
 class AICall(BaseModel):
+    system_prompt: Optional[str] = None
     message_str: Optional[str] = None
     message_containing: Optional[str] = None
     blob_contents: Optional[List[bytes]] = None
@@ -99,6 +100,7 @@ class MockerAIModel:
         response: str | AIChatResponse,
         message: Optional[str] = None,
         message_containing: Optional[str] = None,
+        system_prompt: Optional[str] = None,
         tool_result: Optional[str] = None,
         blob_contents: Optional[List[bytes]] = None,
     ) -> None:
@@ -117,11 +119,12 @@ class MockerAIModel:
             response_obj = response
         self.responses.append(
             AICall(
-                response=response_obj,
+                system_prompt=system_prompt,
                 message_str=message,
                 message_containing=message_containing,
                 blob_contents=blob_contents,
                 tool_result=tool_result,
+                response=response_obj,
             )
         )
 
@@ -156,6 +159,7 @@ class MockerAIModel:
             )
 
             call = AICall(
+                system_prompt = str(system_prompt),
                 message_str=message.content if message else None,
                 blob_contents=[blob.content for blob in message.blobs] if message and message.blobs else None,
                 tool_result=tool_result,
@@ -169,6 +173,12 @@ class MockerAIModel:
             raise RuntimeError("No mocked AI responses available.")
         else:
             call = self.responses.pop(0)
+            if call.system_prompt:
+                assert system_prompt
+                assert system_prompt == call.system_prompt, (
+                    f"Expected system prompt content '{call.system_prompt}', got '{system_prompt}'"
+                )
+
             if call.message_str:
                 assert message and message.content
                 assert message.content == call.message_str, (

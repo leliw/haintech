@@ -103,7 +103,7 @@ class BaseAIAgent(BaseAIChat):
         """
         if message:
             self.download_blobs(message)
-        system_prompt = self._get_prompt()
+        system_prompt = self.system_prompt
         history = list(self.iter_messages())
         response = self.ai_model.get_chat_response(
             system_prompt=system_prompt,

@@ -88,7 +88,7 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         """
         if message:
             await self.download_blobs(message)
-        system_prompt = self._get_prompt()
+        system_prompt = self.system_prompt
         history = list(self.iter_messages())
         try:
             response = await self.ai_model.get_chat_response_async(

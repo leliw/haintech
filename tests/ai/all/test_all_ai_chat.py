@@ -1,5 +1,3 @@
-from typing import override
-
 import pytest
 
 from haintech.ai import AIChatSession, AIPrompt, BaseAIChat, BaseAIModel
@@ -51,13 +49,12 @@ def test_chat_dialog_with_two_questions_and_session(
 
 class Pl2EnTranslator(BaseAIChat):
     def __init__(self, ai_model: BaseAIModel):
-        super().__init__(ai_model=ai_model)
-
-    @override
-    def _get_prompt(self, message=None):
-        return AIPrompt(
-            persona="You are an English to Polish translator.",
-            constraints="Answer always in polish.",
+        super().__init__(
+            ai_model=ai_model,
+            system_prompt=AIPrompt(
+                persona="You are an English to Polish translator.",
+                constraints="Answer always in polish.",
+            ),
         )
 
 
