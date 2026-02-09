@@ -10,6 +10,7 @@ from .base import (
     BaseRAGSearcher,
 )
 from .model import (
+    AIAgentInteraction,
     AIChatResponse,
     AIChatSession,
     AIContext,
@@ -37,6 +38,7 @@ __all__ = [
     "AIModelToolCall",
     "AIChatSession",
     "AIModelInteraction",
+    "AIAgentInteraction",
     "AIModelInteractionMessage",
     "AIModelSession",
     "AIFunctionParameter",

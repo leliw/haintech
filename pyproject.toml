@@ -1,6 +1,6 @@
 [project]
 name = "haintech"
-version = "0.5.9"
+version = "0.5.11"
 license = "MIT"
 description = "Add your description here"
 readme = "README.md"
