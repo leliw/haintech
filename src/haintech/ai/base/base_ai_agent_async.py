@@ -217,7 +217,6 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         Args:
             message: The AIModelInteractionMessage containing blobs to download.
         """
-        _log.warning("Download blobs")
         if message.blob_locations and not self.session_blob_manager:
             raise ValueError("Factory is not set for downloading blobs.")
         if not message.blob_locations:
