@@ -1,15 +1,25 @@
 import logging
 import re
-from itertools import chain
 from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, override
-from warnings import deprecated
 
-import google.generativeai as genai
-from google.api_core import exceptions
-from google.generativeai import protos
-from google.generativeai.client import configure as genai_configure
-from google.generativeai.generative_models import ChatSession, GenerativeModel
-from google.generativeai.types import GenerationConfig, generation_types
+from google import genai
+from google.genai.types import (
+    AutomaticFunctionCallingConfig,
+    Blob,
+    Content,
+    ContentOrDict,
+    FunctionCall,
+    FunctionDeclaration,
+    FunctionResponse,
+    GenerateContentConfig,
+    GenerateContentResponse,
+    GenerationConfig,
+    Part,
+    Schema,
+    Tool,
+    ToolListUnion,
+    Type,
+)
 
 from haintech.ai.exceptions import UnsupportedMimeTypeError
 
@@ -31,7 +41,7 @@ _log = logging.getLogger(__name__)
 class GoogleAIParameters(GenerationConfig):
     pass
 
-@deprecated("Use haintech.ai.google_genai.GoogleAIModel instead")
+
 class GoogleAIModel(BaseAIModel):
     """Google AI implementation of BaseAIModel"""
 
@@ -46,27 +56,36 @@ class GoogleAIModel(BaseAIModel):
         if api_key:
             self.setup(api_key=api_key)
         self.model_name = model_name
-        self.parameters = parameters
+        if not parameters:
+            self.parameters = GenerationConfig()
+        elif isinstance(parameters, GenerationConfig):
+            self.parameters = parameters
+        else:
+            self.parameters = GenerationConfig.model_validate(parameters)
 
     @classmethod
     def setup(cls, api_key: Optional[str] = None):
         if not cls._configured:
-            genai_configure(api_key=api_key)
+            cls.client = genai.Client(api_key=api_key)
             cls._configured = True
             _log.debug("Google AI Model configured")
 
     @classmethod
     def get_model_names(cls) -> List[str]:
+        if not cls._configured:
+            cls.setup()
         ret = []
-        for m in genai.list_models():  # type: ignore
-            if "generateContent" in m.supported_generation_methods:
-                ret.append(m.name[7:] if m.name.startswith("models/") else m.name)
+        for m in cls.client.models.list():
+            if m.supported_actions and "generateContent" in m.supported_actions:
+                if m.name:
+                    model_id = m.name[7:] if m.name.startswith("models/") else m.name
+                    ret.append(model_id)
         return ret
 
     @override
     def get_chat_response(
         self,
-        system_prompt: Optional[str | AIPrompt] = None,
+        system_prompt: str | None = None,
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
         context: Optional[AIContext] = None,
         message: Optional[AIModelInteractionMessage] = None,
@@ -124,46 +143,53 @@ class GoogleAIModel(BaseAIModel):
         functions: Dict[Callable, Any] | None,
         response_format: Literal["text", "json"] = "text",
     ) -> Dict[str, Any]:
+        if not self._configured:
+            self.setup()
+
+        msg_list: list[ContentOrDict] = []
         if not message:
             message = history[-1]
-            msg_list = (self._create_content_from_message(m) for m in history[:-1])
+            msg_list = [self._create_content_from_message(m) for m in history[:-1]]
         else:
-            msg_list = (self._create_content_from_message(m) for m in history)
+            msg_list = [self._create_content_from_message(m) for m in history]
             if isinstance(message, str):
                 message = AIModelInteractionMessage(role="user", content=message)
-        if system_prompt:
-            msg = AIModelInteractionMessage(role="system", content=self._prompt_to_str(system_prompt))
-            msg_list = chain([self._create_content_from_message(msg)], msg_list)
-        if context:
-            msg = AIModelInteractionMessage(role="system", content=self._context_to_str(context))
-            msg_list = chain(msg_list, [self._create_content_from_message(msg)])
 
-        model = GenerativeModel(
-            model_name=self.model_name,
-            generation_config=self.parameters,  # type: ignore
-            # system_instruction=context,
+        system_instructions = self._prompt_to_str(system_prompt) if system_prompt else ""
+        if context:
+            if system_instructions:
+                system_instructions += "\n\n"
+            system_instructions += self._context_to_str(context)
+
+        tools: ToolListUnion | None = None
+        if functions:
+            tool = Tool(function_declarations=list(functions.values()))
+            tools = [tool]
+        config = GenerateContentConfig(
+            **self.parameters.model_dump(exclude_none=True),
+            system_instruction=system_instructions,
+            response_mime_type="text/plain" if response_format == "text" else "application/json",
+            tools=tools,
+            automatic_function_calling=AutomaticFunctionCallingConfig(disable=True),
         )
-        generation_config = GenerationConfig(
-            response_mime_type="text/plain" if response_format == "text" else "application/json"
-        )
-        chat = model.start_chat(history=msg_list)
-        return {"chat": chat, "message": message, "generation_config": generation_config, "functions": functions}
+
+        return {
+            "config": config,
+            "history": msg_list,
+            "message": self._create_content_from_message(message).parts,
+        }
 
     def _get_chat_response(
         self,
-        chat: ChatSession,
-        message: AIModelInteractionMessage,
-        generation_config: GenerationConfig,
-        functions: Optional[Dict[Callable, Any]] = None,
+        config: GenerateContentConfig,
+        history: list[ContentOrDict] | None,
+        message: list[Part] | Part,
     ) -> AIChatResponse:
         try:
-            native_response = chat.send_message(
-                self._create_content_from_message(message),
-                generation_config=generation_config,
-                tools=functions.values() if functions else None,
-            )
+            chat = self.client.chats.create(model=self.model_name, config=config, history=history)
+            native_response = chat.send_message(message)
             return self._create_response_from_content_response(native_response)
-        except exceptions.InvalidArgument as e:
+        except Exception as e:
             if "Unsupported MIME type" in str(e):
                 raise UnsupportedMimeTypeError()
             else:
@@ -171,19 +197,15 @@ class GoogleAIModel(BaseAIModel):
 
     async def _get_chat_response_async(
         self,
-        chat: ChatSession,
-        message: AIModelInteractionMessage,
-        generation_config: GenerationConfig,
-        functions: Optional[Dict[Callable, Any]] = None,
+        config: GenerateContentConfig,
+        history: list[ContentOrDict] | None,
+        message: list[Part] | Part,
     ) -> AIChatResponse:
         try:
-            native_response = await chat.send_message_async(
-                self._create_content_from_message(message),
-                generation_config=generation_config,
-                tools=functions.values() if functions else None,
-            )
-            return await self._create_response_from_content_response_async(native_response)
-        except exceptions.InvalidArgument as e:
+            chat = self.client.aio.chats.create(model=self.model_name, config=config, history=history)
+            native_response = await chat.send_message(message)
+            return self._create_response_from_content_response(native_response)
+        except Exception as e:
             if "Unsupported MIME type" in str(e):
                 raise UnsupportedMimeTypeError()
             else:
@@ -218,17 +240,17 @@ class GoogleAIModel(BaseAIModel):
         return ret
 
     @classmethod
-    def _create_content_from_message(cls, i_message: AIModelInteractionMessage) -> protos.Content:
+    def _create_content_from_message(cls, i_message: AIModelInteractionMessage) -> Content:
         """Converts AIModelInteractionMessage to protos.Content required by Google
 
         Args:
             i_message: AIModelInteractionMessage
         Returns:
-            protos.Content
+            Content
         """
         if i_message.role == "tool":
             return cls._create_content_from_function_response(i_message)
-        parts = [protos.Part(text=i_message.content)] if i_message.content else []
+        parts = [Part(text=i_message.content)] if i_message.content else []
         text_blob_contents = ""
         for blob in i_message.blobs or []:
             _log.warning("name=%s, type=%s", blob.name, blob.content_type)
@@ -237,18 +259,18 @@ class GoogleAIModel(BaseAIModel):
                 text_blob_contents += blob.content.decode("utf-8")
                 text_blob_contents += "\n</file>\n"
             else:
-                parts.append(protos.Part(inline_data=protos.Blob(data=blob.content, mime_type=blob.content_type)))
+                parts.append(Part(inline_data=Blob(data=blob.content, mime_type=blob.content_type)))
         if text_blob_contents:
-            parts.append(protos.Part(text=text_blob_contents))
+            parts.append(Part(text=text_blob_contents))
         for f in cls._create_parts_from_tool_calls(i_message):
             parts.append(f)
-        return protos.Content(
+        return Content(
             role="model" if i_message.role == "assistant" else "user",
             parts=parts,
         )
 
     @classmethod
-    def _create_content_from_function_response(cls, i_message: AIModelInteractionMessage) -> protos.Content:
+    def _create_content_from_function_response(cls, i_message: AIModelInteractionMessage) -> Content:
         """Converts AIModelInteractionMessage with tool call result to protos.Content
 
         Args:
@@ -263,11 +285,11 @@ class GoogleAIModel(BaseAIModel):
             name = match.group(1) if match else tool_call_id
         else:
             name = None
-        return protos.Content(
+        return Content(
             role="user",
             parts=[
-                protos.Part(
-                    function_response=protos.FunctionResponse(
+                Part(
+                    function_response=FunctionResponse(
                         id=tool_call_id,
                         name=name,
                         response={"response": i_message.content},
@@ -277,37 +299,38 @@ class GoogleAIModel(BaseAIModel):
         )
 
     @classmethod
-    def _create_parts_from_tool_calls(cls, i_message: AIModelInteractionMessage) -> Iterable[protos.Part]:
+    def _create_parts_from_tool_calls(cls, i_message: AIModelInteractionMessage) -> Iterable[Part]:
         """Converts AIModelInteractionMessage with tool call to protos.Part
 
         Args:
             i_message: AIModelInteractionMessage
         Returns:
-            Iterable[protos.Part]
+            Iterable[Part]
         """
         if not i_message.tool_calls:
             return []
         return (
-            protos.Part(function_call=protos.FunctionCall(name=tc.function_name, args=tc.arguments))
-            for tc in i_message.tool_calls
+            Part(function_call=FunctionCall(name=tc.function_name, args=tc.arguments)) for tc in i_message.tool_calls
         )
 
     @classmethod
     @override
-    def model_function_definition(cls, ai_function: AIFunction) -> protos.FunctionDeclaration:
-        parameters = protos.Schema(type=protos.Type.OBJECT, properties={}, required=[])
+    def model_function_definition(cls, ai_function: AIFunction) -> FunctionDeclaration:
+        parameters = Schema(type=Type.OBJECT, properties={}, required=[])
+        assert parameters.properties is not None
+        assert parameters.required is not None
         for param in ai_function.parameters:
-            parameters.properties[param.name] = protos.Schema(type=protos.Type.STRING, description=param.description)
+            parameters.properties[param.name] = Schema(type=Type.STRING, description=param.description)
             if param.required:
                 parameters.required.append(param.name)
-        return protos.FunctionDeclaration(
+        return FunctionDeclaration(
             name=ai_function.name,
             description=ai_function.description,
             parameters=parameters,
         )
 
     @classmethod
-    def _create_response_from_content_response(cls, n_resp: generation_types.GenerateContentResponse) -> AIChatResponse:
+    def _create_response_from_content_response(cls, n_resp: GenerateContentResponse) -> AIChatResponse:
         """Converts protos.GenerateContentResponse to AIChatResponse
 
         Args:
@@ -318,7 +341,10 @@ class GoogleAIModel(BaseAIModel):
         tool_calls = []
         texts = []
         name_indices = {}
-        for part in n_resp.parts:
+        assert n_resp.candidates
+        assert n_resp.candidates[0].content
+        assert n_resp.candidates[0].content.parts
+        for part in n_resp.candidates[0].content.parts:
             if part.function_call:
                 fc = part.function_call
                 name = fc.name
@@ -333,48 +359,8 @@ class GoogleAIModel(BaseAIModel):
                 tool_calls.append(
                     AIModelToolCall(
                         id=tool_id,
-                        function_name=name,
-                        arguments=dict(fc.args),
-                    )
-                )
-            if part.text:
-                texts.append(part.text)
-        return AIChatResponse(
-            content="\n".join(texts) or None,
-            tool_calls=tool_calls or None,
-        )
-
-    @classmethod
-    async def _create_response_from_content_response_async(
-        cls, n_resp: generation_types.AsyncGenerateContentResponse
-    ) -> AIChatResponse:
-        """Converts protos.GenerateContentResponse to AIChatResponse
-
-        Args:
-            n_resp: protos.GenerateContentResponse
-        Returns:
-            AIChatResponse
-        """
-        tool_calls = []
-        texts = []
-        name_indices = {}
-        for part in n_resp.parts:
-            if part.function_call:
-                fc = part.function_call
-                name = fc.name
-                # If id is provided, use it
-                if fc.id:
-                    tool_id = fc.id
-                # If not, use name and add numbering
-                else:
-                    idx = name_indices.get(name, 1)
-                    tool_id = f"{name}__{idx}"
-                    name_indices[name] = idx + 1
-                tool_calls.append(
-                    AIModelToolCall(
-                        id=tool_id,
-                        function_name=name,
-                        arguments=dict(fc.args),
+                        function_name=name,  # type: ignore
+                        arguments=dict(fc.args),  # type: ignore
                     )
                 )
             if part.text:
@@ -388,7 +374,7 @@ class GoogleAIModel(BaseAIModel):
         from agents.mcp import MCPServer
         from mcp import Tool as MCPTool
 
-        def prepare_mcp_tool_definition(self, tool: MCPTool) -> protos.FunctionDeclaration:
+        def prepare_mcp_tool_definition(self, tool: MCPTool) -> FunctionDeclaration:
             """Creates a FunctionDefinition from an MCP Tool.
 
             It can be overriden if other models expect different definition
@@ -398,18 +384,19 @@ class GoogleAIModel(BaseAIModel):
             Returns:
                 A FunctionDefinition object representing the tool.
             """
-            parameters = protos.Schema(type=protos.Type.OBJECT, properties={}, required=[])
+            parameters = Schema(type=Type.OBJECT, properties={}, required=[])
+            assert parameters.properties is not None
             for param_name, param in tool.inputSchema["properties"].items():
                 match param["type"]:
                     case "integer":
-                        type = protos.Type.INTEGER
+                        type = Type.INTEGER
                     case "boolean":
-                        type = protos.Type.BOOLEAN
+                        type = Type.BOOLEAN
                     case _:
-                        type = protos.Type.STRING
-                parameters.properties[param_name] = protos.Schema(type=type)
+                        type = Type.STRING
+                parameters.properties[param_name] = Schema(type=type)
             parameters.required = tool.inputSchema["required"] if "required" in tool.inputSchema else []
-            return protos.FunctionDeclaration(
+            return FunctionDeclaration(
                 name=tool.name,
                 description=tool.description,
                 parameters=parameters,
