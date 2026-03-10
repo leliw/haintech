@@ -1,5 +1,5 @@
 import pytest
-from ampf.local_async import LocalAsyncFactory
+from ampf.local import LocalAsyncFactory
 from google.generativeai.client import configure as genai_configure
 
 from haintech.ai.base import BaseAIAgentAsync
