@@ -4,12 +4,13 @@ from contextlib import contextmanager
 from typing import Any, Callable, Dict, Iterable, List, Literal, Optional
 
 import pytest
-from haintech.ai import AIChatResponse, AIContext, AIModelInteraction, AIModelInteractionMessage, AIPrompt
+from haintech.ai import AIChatResponse, AIContext, AIModelInteraction, AIModelInteractionMessage
 from pydantic import BaseModel, field_serializer
 from pytest_mock.plugin import MockerFixture
 
 try:
     from haintech.ai.google_generativeai import GoogleAIModel  # noqa: F401
+    from haintech.ai.google_genai import GoogleAIModel  # noqa: F401, F811
 
     GOOGLE_AVAILABLE = True
 except ImportError:
@@ -56,10 +57,12 @@ class AICall(BaseModel):
 
 class MockerAIModel:
     _mocked_methods: List[str] = []
-    
+
     if GOOGLE_AVAILABLE:
         _mocked_methods.append("haintech.ai.google_generativeai.GoogleAIModel.get_chat_response")
         _mocked_methods.append("haintech.ai.google_generativeai.GoogleAIModel.get_chat_response_async")
+        _mocked_methods.append("haintech.ai.google_genai.GoogleAIModel.get_chat_response")
+        _mocked_methods.append("haintech.ai.google_genai.GoogleAIModel.get_chat_response_async")
     if OPENAI_AVAILABLE:
         _mocked_methods.append("haintech.ai.open_ai.OpenAIModel.get_chat_response")
         _mocked_methods.append("haintech.ai.open_ai.OpenAIModel.get_chat_response_async")
@@ -83,7 +86,7 @@ class MockerAIModel:
     @contextmanager
     def record(self):
         """Records all AI responses and prints them to console."""
-        from haintech.ai.google_generativeai import GoogleAIModel, GoogleAIParameters
+        from haintech.ai.google_genai import GoogleAIModel, GoogleAIParameters
 
         self.org_ai_model = GoogleAIModel(parameters=GoogleAIParameters(temperature=0))
         yield
@@ -130,7 +133,7 @@ class MockerAIModel:
 
     def get_chat_response(
         self,
-        system_prompt: Optional[str | AIPrompt] = None,
+        system_prompt: Optional[str] = None,
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
         context: Optional[AIContext] = None,
         message: Optional[AIModelInteractionMessage] = None,
@@ -159,7 +162,7 @@ class MockerAIModel:
             )
 
             call = AICall(
-                system_prompt = str(system_prompt),
+                system_prompt=system_prompt,
                 message_str=message.content if message else None,
                 blob_contents=[blob.content for blob in message.blobs] if message and message.blobs else None,
                 tool_result=tool_result,
