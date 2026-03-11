@@ -9,6 +9,7 @@ A utility package for AI solutions.
   * Google / Gemini
   * DeepSeek
   * Anthropic
+  * [prompts](doc/ai/prompts.md) - prompt management
 * [pipelines](doc/pipelines.md) - framework for buiding pipelines
 * [testing](doc/testing.md) - package with testing utitlities
 

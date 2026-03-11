@@ -16,7 +16,7 @@ def test_agent_with_ai_task(ai_model: BaseAIModel, session):
     )
     td = AITask(
         name="create_feature_name",
-        description="Creates feature name from its description it can be used as folder name and so on.",
+        description="Creates feature name from its description; it can be used as a folder name and so on.",
         parameters=[
             AIFunctionParameter(
                 name="feature", description="Feature description", type="str"
@@ -25,16 +25,17 @@ def test_agent_with_ai_task(ai_model: BaseAIModel, session):
         return_type="str",
         return_description="Feature name",
         system_instructions=AIPrompt(
-            persona="You are experienced developer",
+            persona="You are an experienced developer",
             objective="Prepare the name for the feature",
             instructions="Use snake_case.",
-            context="It will be used as a folder name contais code.",
-            constraints="Use english language and plural form. Return only the name.",
+            context="It will be used as a folder name containing code.",
+            constraints="Use English and plural form. Return only the name.",
             examples=[
                 "Q: Zarządzanie użytkownikami\nA: users",
                 "Q: User Management\nA: users",
                 "Q: Zarządzanie projektami\nA: projects",
-                "Q: Project Management\nA: projectsQ: CRUD dla książek\nA: books",
+                "Q: Project Management\nA: projects",
+                "Q: CRUD dla książek\nA: books",
                 "Q: Obsługa projektów\nA: projects",
             ],
         ),
@@ -43,9 +44,9 @@ def test_agent_with_ai_task(ai_model: BaseAIModel, session):
     ai_agent.add_ai_task(td)
 
     response = ai_agent.get_response(
-        "Zapropounuj nazwę katalogu dla kodu zarządzania użytkownikami"
+        "Zaproponuj nazwę katalogu dla kodu zarządzania użytkownikami"
     )
-    # Then: I shult get function call
+    # Then: I should get function call
     print(response)
     assert response.tool_calls
     assert 1 == len(response.tool_calls)
