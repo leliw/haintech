@@ -1,12 +1,15 @@
+import base64
 import json
 import logging
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, Iterable, List, Literal, Optional
+from typing import Any, Callable, Iterable, Literal, Optional
 
 import pytest
 from haintech.ai import AIChatResponse, AIContext, AIModelInteraction, AIModelInteractionMessage
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, field_serializer, field_validator
 from pytest_mock.plugin import MockerFixture
+
+from haintech.ai.base.base_ai_model import BaseAIModel
 
 try:
     from haintech.ai.google_generativeai import GoogleAIModel  # noqa: F401
@@ -44,20 +47,30 @@ class AICall(BaseModel):
     system_prompt: Optional[str] = None
     message_str: Optional[str] = None
     message_containing: Optional[str] = None
-    blob_contents: Optional[List[bytes]] = None
+    blob_contents: Optional[list[bytes]] = None
     tool_result: Optional[str] = None
     response: AIChatResponse
 
     @field_serializer("blob_contents")
-    def serialize_blobs(self, value: Optional[List[bytes]]) -> Optional[List[str]]:
+    def serialize_blobs(self, value: Optional[list[bytes]]) -> Optional[list[str]]:
         if value is None:
             return None
-        return [repr(b) for b in value]
+        return [base64.b64encode(b).decode("utf-8") for b in value]
+
+    @field_validator("blob_contents", mode="before")
+    @classmethod
+    def decode_blobs(cls, value: Any) -> Any:
+        if isinstance(value, list):
+            return [
+                base64.b64decode(v) if isinstance(v, str) else v
+                for v in value
+            ]
+        return value
 
 
 class MockerAIModel:
-    _mocked_methods: List[str] = []
-
+    _mocked_methods: list[str] = []
+    
     if GOOGLE_AVAILABLE:
         _mocked_methods.append("haintech.ai.google_generativeai.GoogleAIModel.get_chat_response")
         _mocked_methods.append("haintech.ai.google_generativeai.GoogleAIModel.get_chat_response_async")
@@ -76,7 +89,7 @@ class MockerAIModel:
     def __init__(self, mocker: MockerFixture):
         self.mocker = mocker
         self.org_ai_model = None
-        self.responses: List[AICall] = []
+        self.responses: list[AICall] = []
         self.setup()
 
     def setup(self) -> None:
@@ -84,11 +97,11 @@ class MockerAIModel:
             self.mocker.patch(method, side_effect=self.get_chat_response)
 
     @contextmanager
-    def record(self):
+    def record(self, ai_model: BaseAIModel | None = None):
         """Records all AI responses and prints them to console."""
         from haintech.ai.google_genai import GoogleAIModel, GoogleAIParameters
 
-        self.org_ai_model = GoogleAIModel(parameters=GoogleAIParameters(temperature=0))
+        self.org_ai_model = ai_model or GoogleAIModel(parameters=GoogleAIParameters(temperature=0))
         yield
         print(
             json.dumps(
@@ -105,7 +118,7 @@ class MockerAIModel:
         message_containing: Optional[str] = None,
         system_prompt: Optional[str] = None,
         tool_result: Optional[str] = None,
-        blob_contents: Optional[List[bytes]] = None,
+        blob_contents: Optional[list[bytes]] = None,
     ) -> None:
         """Adds a mocked AI response.
 
@@ -114,7 +127,7 @@ class MockerAIModel:
             message (Optional[str], optional): The exact message string to match. Defaults to None.
             message_containing (Optional[str], optional): A substring that should be contained in the message. Defaults to None.
             tool_result (Optional[str], optional): The tool result to match. Defaults to None.
-            blob_contents (Optional[List[bytes]], optional): The blob contents to match. Defaults to None.
+            blob_contents (Optional[list[bytes]], optional): The blob contents to match. Defaults to None.
         """
         if isinstance(response, str):
             response_obj = AIChatResponse(content=response)
@@ -137,7 +150,7 @@ class MockerAIModel:
         history: Optional[Iterable[AIModelInteractionMessage]] = None,
         context: Optional[AIContext] = None,
         message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[Dict[Callable, Any]] = None,
+        functions: Optional[dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
@@ -217,6 +230,10 @@ class MockerAIModel:
                 )
             )
         return response
+
+    def add_calls(self, calls: list[dict]) -> None:
+        for call in calls:
+            self.responses.append(AICall.model_validate(call))
 
 
 @pytest.fixture

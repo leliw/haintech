@@ -65,6 +65,7 @@ def test_recording(mocker_ai_model: MockerAIModel):  # noqa: F811
         assert False
         # And: Calls are printed in console
 
+
 def test_mock_with_system_prompt(mocker_ai_model: MockerAIModel):  # noqa: F811
     system_prompt = "Always answer `Yes sir!`"
     mocker_ai_model.add(system_prompt=system_prompt, response="Yes sir!")
@@ -72,6 +73,7 @@ def test_mock_with_system_prompt(mocker_ai_model: MockerAIModel):  # noqa: F811
     ai_chat = BaseAIChat(ai_model, system_prompt=system_prompt)
     response = ai_chat.get_text_response("Who was the first US president?")
     assert response == "Yes sir!"
+
 
 @pytest.mark.asyncio
 async def test_mock_with_system_prompt_async(mocker_ai_model: MockerAIModel):  # noqa: F811
@@ -81,3 +83,21 @@ async def test_mock_with_system_prompt_async(mocker_ai_model: MockerAIModel):  #
     ai_chat = BaseAIChatAsync(ai_model, system_prompt=system_prompt)
     response = await ai_chat.get_text_response("Who was the first US president?")
     assert response == "Yes sir!"
+
+
+def test_add_calls(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):  # noqa: F811
+    # Given: A call list returned by record() method
+    call_list = [
+        {
+            "message_str": "Who was the first US president?",
+            "response": {"content": "The first US president was **George Washington**."},
+        }
+    ]
+    # When: Add this list
+    mocker_ai_model.add_calls(call_list)
+    # And: get_chat_response() for AI model is called
+    response = ai_model.get_chat_response(
+        message=AIModelInteractionMessage(role="user", content="Who was the first US president?")
+    )
+    # Then: The mock returns a defined response in the list
+    assert response.content == "The first US president was **George Washington**."
