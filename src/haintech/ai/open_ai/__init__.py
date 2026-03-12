@@ -3,6 +3,8 @@ from .open_ai_agent import OpenAIAgent
 from .open_ai_chat import OpenAIChat
 from .open_ai_model import OpenAIModel
 from .open_ai_text_embedding_model import OpenAITextEmbeddingModel
+from .open_ai_image_generator import OpenAIImageGenerator
+
 
 __all__ = [
     "OpenAIModel",
@@ -10,4 +12,5 @@ __all__ = [
     "OpenAIChat",
     "OpenAIAgent",
     "OpenAITextEmbeddingModel",
+    "OpenAIImageGenerator",
 ]
