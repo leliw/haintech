@@ -8,6 +8,7 @@ from .base import (
     BaseAISupervisor,
     BaseAITextEmbeddingModel,
     BaseRAGSearcher,
+    BaseImageGenerator,
 )
 from .model import (
     AIAgentInteraction,
@@ -58,6 +59,7 @@ __all__ = [
     "BaseAITextEmbeddingModel",
     "BaseRAGSearcher",
     "BaseAgentSearcher",
+    "BaseImageGenerator",
     "AIFunction",
     "AIFunctionParameter",
     "AITask",

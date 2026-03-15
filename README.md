@@ -10,6 +10,7 @@ A utility package for AI solutions.
   * DeepSeek
   * Anthropic
   * [prompts](doc/ai/prompts.md) - prompt management
+  * [image generators](doc/ai/image_generators.md) - utilities for image generation models
 * [pipelines](doc/pipelines.md) - framework for buiding pipelines
 * [testing](doc/testing.md) - package with testing utitlities
 

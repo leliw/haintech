@@ -9,6 +9,8 @@ from .base_ai_text_embedding_model import BaseAITextEmbeddingModel
 from .base_rag_searcher import BaseRAGSearcher
 from .base_agent_searcher import BaseAgentSearcher
 
+from .base_image_generator import BaseImageGenerator
+
 
 __all__ = [
     "BaseRAGSearcher",
@@ -20,4 +22,5 @@ __all__ = [
     "BaseAIAgentAsync",
     "BaseAISupervisor",
     "BaseAITextEmbeddingModel",
+    "BaseImageGenerator",
 ]
