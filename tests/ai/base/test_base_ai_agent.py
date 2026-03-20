@@ -1,6 +1,6 @@
 from ampf.local import LocalFactory
 from haintech.ai.base import BaseAIAgent
-from haintech.ai.google_generativeai import GoogleAIModel, GoogleAIParameters
+from haintech.ai.google_genai import GoogleAIModel, GoogleAIParameters
 from haintech.ai.model import AIChatSession, AIModelInteractionMessage
 import pytest
 

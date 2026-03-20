@@ -3,7 +3,7 @@ from ampf.local import LocalAsyncFactory
 from google.generativeai.client import configure as genai_configure
 
 from haintech.ai.base import BaseAIAgentAsync
-from haintech.ai.google_generativeai import GoogleAIModel, GoogleAIParameters
+from haintech.ai.google_genai import GoogleAIModel, GoogleAIParameters
 from haintech.ai.model import AIChatSession, AIModelInteractionMessage
 
 
