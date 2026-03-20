@@ -2,6 +2,8 @@ import json
 import logging
 from typing import Callable, Literal, Type
 
+from ampf.base import Blob, BlobLocation
+
 from haintech.ai import AIChatResponse, AIModelInteractionMessage, BaseAIModel
 from haintech.ai.model import AIModelInteraction
 from pydantic import BaseModel, ValidationError
@@ -22,11 +24,18 @@ class PromptExecutor:
         self.prompt_service = prompt_service
         self.interaction_logger = interaction_logger
 
-    def execute(self, prompt_name: str, response_format: Literal["text", "json"] = "text", **kwargs) -> AIChatResponse:
+    def execute(
+        self,
+        prompt_name: str,
+        response_format: Literal["text", "json"] = "text",
+        blob_locations: list[BlobLocation] | None = None,
+        blobs: list[Blob] | None = None,
+        **kwargs,
+    ) -> AIChatResponse:
         system, user = self.prompt_service.render(prompt_name, **kwargs)
         m_resp = self.ai_model.get_chat_response(
             system_prompt=system,
-            message=AIModelInteractionMessage(role="user", content=user),
+            message=AIModelInteractionMessage(role="user", content=user, blob_locations=blob_locations or [], blobs=blobs),
             response_format=response_format,
             interaction_logger=self.interaction_logger,
         )
@@ -34,8 +43,16 @@ class PromptExecutor:
             raise ValueError(f"AI model returned empty content for prompt: {prompt_name}")
         return m_resp
 
-    def execute_list(self, prompt_name: str, **kwargs) -> list[str]:
-        response = self.execute(prompt_name, response_format="json", **kwargs)
+    def execute_list(
+        self,
+        prompt_name: str,
+        blob_locations: list[BlobLocation] | None = None,
+        blobs: list[Blob] | None = None,
+        **kwargs,
+    ) -> list[str]:
+        response = self.execute(
+            prompt_name, response_format="json", blob_locations=blob_locations, blobs=blobs, **kwargs
+        )
         return self._prepare_response_list(response)
 
     def _prepare_response_list(self, m_resp: AIChatResponse) -> list[str]:
@@ -57,7 +74,14 @@ class PromptExecutor:
             _log.warning("JSON content: %s", m_resp.content)
             raise e
 
-    def execute_typed[T: BaseModel](self, prompt_name: str, clazz: Type[T], **kwargs) -> T:
+    def execute_typed[T: BaseModel](
+        self,
+        prompt_name: str,
+        clazz: Type[T],
+        blob_locations: list[BlobLocation] | None = None,
+        blobs: list[Blob] | None = None,
+        **kwargs,
+    ) -> T:
         output_class = self.prompt_service.get_output_class(prompt_name)
         if output_class:
             json_schema = output_class.model_json_schema()
@@ -65,7 +89,14 @@ class PromptExecutor:
             json_schema = clazz.model_json_schema()
         for attempt in range(3):
             try:
-                response = self.execute(prompt_name, response_format="json", json_schema=json_schema, **kwargs)
+                response = self.execute(
+                    prompt_name,
+                    response_format="json",
+                    json_schema=json_schema,
+                    blob_locations=blob_locations,
+                    blobs=blobs,
+                    **kwargs,
+                )
                 if output_class:
                     ret = self._prepare_response_typed(output_class, response)
                     return ret.convert(**kwargs)
@@ -89,9 +120,23 @@ class PromptExecutor:
             _log.warning("JSON content: %s", m_resp.content)
             raise e
 
-    def execute_typed_list[T: BaseModel](self, prompt_name: str, clazz: Type[T], **kwargs) -> list[T]:
+    def execute_typed_list[T: BaseModel](
+        self,
+        prompt_name: str,
+        clazz: Type[T],
+        blob_locations: list[BlobLocation] | None = None,
+        blobs: list[Blob] | None = None,
+        **kwargs,
+    ) -> list[T]:
         json_schema = {"type": "array", "items": clazz.model_json_schema()}
-        response = self.execute(prompt_name, response_format="json", json_schema=json_schema, **kwargs)
+        response = self.execute(
+            prompt_name,
+            response_format="json",
+            json_schema=json_schema,
+            blob_locations=blob_locations,
+            blobs=blobs,
+            **kwargs,
+        )
         return self._prepare_response_typed_list(clazz, response)
 
     def _prepare_response_typed_list[T: BaseModel](self, clazz: Type[T], m_resp: AIChatResponse) -> list[T]:
