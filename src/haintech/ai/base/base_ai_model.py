@@ -4,6 +4,7 @@ from inspect import Parameter, signature
 from types import UnionType
 from typing import Any, Callable, Dict, Iterable, Literal, Optional, Sequence, Type
 
+from ampf.base import Blob, BlobLocation
 from openai.types.shared_params import FunctionDefinition
 from pydantic import BaseModel
 
@@ -27,10 +28,14 @@ class BaseAIModel(ABC):
         message: str,
         response_format: Literal["text", "json"] | dict = "text",
         system_prompt: str | None = None,
+        blob_locations: list[BlobLocation] | None = None,
+        blobs: list[Blob] | None = None,
     ) -> str:
         response = self.get_chat_response(
             system_prompt=system_prompt,
-            message=AIModelInteractionMessage(role="user", content=message),
+            message=AIModelInteractionMessage(
+                role="user", content=message, blob_locations=blob_locations or [], blobs=blobs
+            ),
             response_format=response_format,
         )
         if response.content is None:
@@ -104,8 +109,16 @@ class BaseAIModel(ABC):
         message: str,
         response_format: Type[T],
         system_prompt: str | None = None,
+        blob_locations: list[BlobLocation] | None = None,
+        blobs: list[Blob] | None = None,
     ) -> T:
-        response = self.get_response(message, self._prepare_response_format(response_format), system_prompt)
+        response = self.get_response(
+            message,
+            self._prepare_response_format(response_format),
+            system_prompt,
+            blob_locations=blob_locations,
+            blobs=blobs,
+        )
         return response_format.model_validate_json(response)
 
     def get_response_list_typed[T: BaseModel](
@@ -113,15 +126,34 @@ class BaseAIModel(ABC):
         message: str,
         response_format: Type[T],
         system_prompt: str | None = None,
+        blob_locations: list[BlobLocation] | None = None,
+        blobs: list[Blob] | None = None,
     ) -> list[T]:
-        response = self.get_response(message, self._prepare_response_format(list[response_format]), system_prompt)
+        response = self.get_response(
+            message,
+            self._prepare_response_format(list[response_format]),
+            system_prompt,
+            blob_locations=blob_locations,
+            blobs=blobs,
+        )
         list_wrapper = json.loads(response)
         return [response_format.model_validate(j) for j in list_wrapper["list"]]
 
     def get_response_list[T: str | int | float | bool](
-        self, message: str, type: Type[T] = str, system_prompt: str | None = None
+        self,
+        message: str,
+        type: Type[T] = str,
+        system_prompt: str | None = None,
+        blob_locations: list[BlobLocation] | None = None,
+        blobs: list[Blob] | None = None,
     ) -> list[T]:
-        response = self.get_response(message, self._prepare_response_format(list[type]), system_prompt)
+        response = self.get_response(
+            message,
+            self._prepare_response_format(list[type]),
+            system_prompt,
+            blob_locations=blob_locations,
+            blobs=blobs,
+        )
         list_wrapper = json.loads(response)
         return list_wrapper["list"]
 
