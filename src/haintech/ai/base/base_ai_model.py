@@ -47,10 +47,17 @@ class BaseAIModel(ABC):
         message: str,
         response_format: Literal["text", "json"] | dict = "text",
         system_prompt: str | None = None,
+        blob_locations: list[BlobLocation] | None = None,
+        blobs: list[Blob] | None = None,
     ) -> str:
         response = await self.get_chat_response_async(
             system_prompt=system_prompt,
-            message=AIModelInteractionMessage(role="user", content=message),
+            message=AIModelInteractionMessage(
+                role="user",
+                content=message,
+                blob_locations=blob_locations or [],
+                blobs=blobs,
+            ),
             response_format=response_format,
         )
         if response.content is None:
@@ -162,8 +169,16 @@ class BaseAIModel(ABC):
         message: str,
         response_format: Type[T],
         system_prompt: str | None = None,
+        blob_locations: list[BlobLocation] | None = None,
+        blobs: list[Blob] | None = None,
     ) -> T:
-        response = await self.get_response_async(message, self._prepare_response_format(response_format), system_prompt)
+        response = await self.get_response_async(
+            message,
+            self._prepare_response_format(response_format),
+            system_prompt,
+            blob_locations=blob_locations,
+            blobs=blobs,
+        )
         return response_format.model_validate_json(response)
 
     async def get_response_list_typed_async[T: BaseModel](
@@ -171,17 +186,34 @@ class BaseAIModel(ABC):
         message: str,
         response_format: Type[T],
         system_prompt: str | None = None,
+        blob_locations: list[BlobLocation] | None = None,
+        blobs: list[Blob] | None = None,
     ) -> list[T]:
         response = await self.get_response_async(
-            message, self._prepare_response_format(list[response_format]), system_prompt
+            message,
+            self._prepare_response_format(list[response_format]),
+            system_prompt,
+            blob_locations=blob_locations,
+            blobs=blobs,
         )
         list_wrapper = json.loads(response)
         return [response_format.model_validate(j) for j in list_wrapper["list"]]
 
     async def get_response_list_async[T: str | int | float | bool](
-        self, message: str, type: Type[T] = str, system_prompt: str | None = None
+        self,
+        message: str,
+        type: Type[T] = str,
+        system_prompt: str | None = None,
+        blob_locations: list[BlobLocation] | None = None,
+        blobs: list[Blob] | None = None,
     ) -> list[T]:
-        response = await self.get_response_async(message, self._prepare_response_format(list[type]), system_prompt)
+        response = await self.get_response_async(
+            message,
+            self._prepare_response_format(list[type]),
+            system_prompt,
+            blob_locations=blob_locations,
+            blobs=blobs,
+        )
         list_wrapper = json.loads(response)
         return list_wrapper["list"]
 
