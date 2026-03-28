@@ -152,7 +152,7 @@ class MockerAIModel:
         message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
-        response_format: Literal["text", "json"] = "text",
+        response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         history = list(history or [])
         if history and history[-1].role == "tool":
