@@ -1,9 +1,13 @@
+import json
 from abc import ABC, abstractmethod
 from inspect import Parameter, signature
 from types import UnionType
-from typing import Any, Callable, Dict, Iterable, Literal, Optional
+from typing import Any, Callable, Dict, Iterable, Literal, Optional, Sequence, Type
 
 from openai.types.shared_params import FunctionDefinition
+from pydantic import BaseModel
+
+from haintech.helpers import get_inner_type, is_list_type
 
 from ..model import (
     AIChatResponse,
@@ -18,6 +22,137 @@ from ..model import (
 
 
 class BaseAIModel(ABC):
+    def get_response(
+        self,
+        message: str,
+        response_format: Literal["text", "json"] | dict = "text",
+        system_prompt: str | None = None,
+    ) -> str:
+        response = self.get_chat_response(
+            system_prompt=system_prompt,
+            message=AIModelInteractionMessage(role="user", content=message),
+            response_format=response_format,
+        )
+        if response.content is None:
+            raise ValueError("AI model returned empty content")
+        return response.content
+
+    async def get_response_async(
+        self,
+        message: str,
+        response_format: Literal["text", "json"] | dict = "text",
+        system_prompt: str | None = None,
+    ) -> str:
+        response = await self.get_chat_response_async(
+            system_prompt=system_prompt,
+            message=AIModelInteractionMessage(role="user", content=message),
+            response_format=response_format,
+        )
+        if response.content is None:
+            raise ValueError("AI model returned empty content")
+        return response.content
+
+    def _prepare_response_format(
+        self,
+        response_format: Literal["text", "json"]
+        | Type[Sequence[BaseModel | str | int | float | bool]]
+        | Type[BaseModel] = "text",
+    ) -> dict:
+        if response_format == "text":
+            ret = {"type": "text"}
+        elif response_format == "json":
+            ret = {"type": "json_object"}
+        elif isinstance(response_format, type) and issubclass(response_format, BaseModel):
+            ret = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": response_format.__name__,
+                    "schema": response_format.model_json_schema(),
+                },
+            }
+        elif is_list_type(response_format):
+            inner_type = get_inner_type(response_format)
+            if inner_type is str:
+                inner_ret = {"type": "array", "items": {"type": "string"}}
+            elif inner_type is int:
+                inner_ret = {"type": "array", "items": {"type": "integer"}}
+            elif inner_type is float:
+                inner_ret = {"type": "array", "items": {"type": "number"}}
+            elif inner_type is bool:
+                inner_ret = {"type": "array", "items": {"type": "boolean"}}
+            elif issubclass(inner_type, BaseModel):
+                inner_ret = {"type": "array", "items": inner_type.model_json_schema()}
+            else:
+                raise ValueError(f"Unsupported inner response format: {inner_type}")
+            ret = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "list_wrapper",
+                    "schema": {
+                        "type": "object",
+                        "properties": {"list": inner_ret},
+                        "additionalProperties": False,
+                    },
+                },
+            }
+        else:
+            raise ValueError(f"Unsupported response format: {response_format}")
+        return ret
+
+    def get_response_typed[T: BaseModel](
+        self,
+        message: str,
+        response_format: Type[T],
+        system_prompt: str | None = None,
+    ) -> T:
+        response = self.get_response(message, self._prepare_response_format(response_format), system_prompt)
+        return response_format.model_validate_json(response)
+
+    def get_response_list_typed[T: BaseModel](
+        self,
+        message: str,
+        response_format: Type[T],
+        system_prompt: str | None = None,
+    ) -> list[T]:
+        response = self.get_response(message, self._prepare_response_format(list[response_format]), system_prompt)
+        list_wrapper = json.loads(response)
+        return [response_format.model_validate(j) for j in list_wrapper["list"]]
+
+    def get_response_list[T: str | int | float | bool](
+        self, message: str, type: Type[T] = str, system_prompt: str | None = None
+    ) -> list[T]:
+        response = self.get_response(message, self._prepare_response_format(list[type]), system_prompt)
+        list_wrapper = json.loads(response)
+        return list_wrapper["list"]
+
+    async def get_response_typed_async[T: BaseModel](
+        self,
+        message: str,
+        response_format: Type[T],
+        system_prompt: str | None = None,
+    ) -> T:
+        response = await self.get_response_async(message, self._prepare_response_format(response_format), system_prompt)
+        return response_format.model_validate_json(response)
+
+    async def get_response_list_typed_async[T: BaseModel](
+        self,
+        message: str,
+        response_format: Type[T],
+        system_prompt: str | None = None,
+    ) -> list[T]:
+        response = await self.get_response_async(
+            message, self._prepare_response_format(list[response_format]), system_prompt
+        )
+        list_wrapper = json.loads(response)
+        return [response_format.model_validate(j) for j in list_wrapper["list"]]
+
+    async def get_response_list_async[T: str | int | float | bool](
+        self, message: str, type: Type[T] = str, system_prompt: str | None = None
+    ) -> list[T]:
+        response = await self.get_response_async(message, self._prepare_response_format(list[type]), system_prompt)
+        list_wrapper = json.loads(response)
+        return list_wrapper["list"]
+
     @abstractmethod
     def get_chat_response(
         self,
@@ -27,7 +162,7 @@ class BaseAIModel(ABC):
         message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
-        response_format: Literal["text", "json"] = "text",
+        response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         """Return chat response from LLM
 
@@ -52,7 +187,7 @@ class BaseAIModel(ABC):
         message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
-        response_format: Literal["text", "json"] = "text",
+        response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         return self.get_chat_response(
             message=message,
