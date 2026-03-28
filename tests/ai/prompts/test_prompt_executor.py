@@ -1,16 +1,14 @@
 from pathlib import Path
 
+from pydantic import BaseModel
+import pytest
 from ampf.local import LocalFactory
 
-
 from haintech.ai import AIChatResponse
-import pytest
-
 from haintech.ai.google_genai import GoogleAIModel
 from haintech.ai.prompts.prompt_executor import PromptExecutor
 from haintech.ai.prompts.prompt_service import PromptService
 from haintech.testing import MockerAIModel
-
 from tests.ai.prompts.model import InfoPageCreate
 
 
@@ -26,36 +24,14 @@ def prompt_executor(prompt_service: PromptService) -> PromptExecutor:
     return PromptExecutor(ai_model, prompt_service)
 
 
-def test_prepare_response_typed(prompt_executor: PromptExecutor):
-    m_resp = AIChatResponse(
-        content="""
-    {
-        "language": "en",
-        "level": "A1",
-        "order": 1,
-        "type": "info",
-        "title": "Verb to be - Introduction",
-        "content": "The verb 'to be' is very important in English. It means 'am', 'is', or 'are'. We use it to talk about people, things, and places."
-    }
-"""
-    )
-    ret = prompt_executor._prepare_response_typed(InfoPageCreate, m_resp)
-    # Then: A InfoPageCreate objects is returned
-    assert isinstance(ret, InfoPageCreate)
+class Book(BaseModel):
+    title: str
+    author: str
+    year: int
+    genre: str
 
 
-def test_prepare_response_typed_output(prompt_service: PromptService, prompt_executor: PromptExecutor):
-    m_resp = AIChatResponse(
-        content="""{"content": "The verb 'to be' is very important in English. It means 'am', 'is', or 'are'. We use it to talk about people, things, and places."}"""
-    )
-    ret = prompt_executor._prepare_response_typed(prompt_service.get_output_class("test_output"), m_resp)  # type: ignore
-    # Then: A InfoPageCreate objects is returned after conversion
-    out = ret.convert(language="en", level="A1", title="Verb to be - Introduction")
-
-    assert isinstance(out, InfoPageCreate)
-
-
-def test_execute_typed_output(prompt_executor: PromptExecutor, mocker_ai_model: MockerAIModel):
+def test_execute_typed(prompt_executor: PromptExecutor, mocker_ai_model: MockerAIModel):
     mocker_ai_model.add(
         message_containing="{'properties': {'content': {'title': 'Content', 'type': 'string'}}, 'required': ['content'], 'title': 'Output', 'type': 'object'}",
         response='{"content": "Welcome to the fascinating world of English verbs! Today, we\'re diving into one of the most fundamental and frequently used verbs: \'to be\'." }',
@@ -68,37 +44,38 @@ def test_execute_typed_output(prompt_executor: PromptExecutor, mocker_ai_model: 
     assert isinstance(ret, InfoPageCreate)
 
 
-def test_prepare_response_typed_list(prompt_executor: PromptExecutor):
-    m_resp = AIChatResponse(
-        content="""
-{
-  "type": "array",
-  "items": [
-    {
-        "language": "en",
-        "level": "A1",
-        "order": 1,
-        "type": "info",
-        "title": "Verb to be - Introduction",
-        "content": "The verb 'to be' is very important in English. It means 'am', 'is', or 'are'. We use it to talk about people, things, and places."
-    },
-    {
-        "language": "en",
-        "level": "A1",
-        "order": 1,
-        "type": "info",
-        "title": "Using 'am'",
-        "content": "'Am' is used with 'I'. For example: I am happy. I am a student."
-    }
-  ]
-}
-"""
+def test_execute_typed_list(prompt_executor: PromptExecutor, mocker_ai_model: MockerAIModel):
+    mocker_ai_model.add_calls(
+        [
+            {
+                "system_prompt": "",
+                "message_str": "Return list of Harry Potter books.",
+                "response": {
+                    "content": '{"list":[{"title":"Harry Potter and the Sorcerer\'s Stone","author":"J.K. Rowling","year":1997,"genre":"Fantasy"},{"title":"Harry Potter and the Chamber of Secrets","author":"J.K. Rowling","year":1998,"genre":"Fantasy"},{"title":"Harry Potter and the Prisoner of Azkaban","author":"J.K. Rowling","year":1999,"genre":"Fantasy"},{"title":"Harry Potter and the Goblet of Fire","author":"J.K. Rowling","year":2000,"genre":"Fantasy"},{"title":"Harry Potter and the Order of the Phoenix","author":"J.K. Rowling","year":2003,"genre":"Fantasy"},{"title":"Harry Potter and the Half-Blood Prince","author":"J.K. Rowling","year":2005,"genre":"Fantasy"},{"title":"Harry Potter and the Deathly Hallows","author":"J.K. Rowling","year":2007,"genre":"Fantasy"}]}'
+                },
+            }
+        ]
     )
-    ret = prompt_executor._prepare_response_typed_list(InfoPageCreate, m_resp)
-    # Then: A list of InfoPageCreate objects is returned
-    assert len(ret) > 0
-    assert isinstance(ret, list)
-    assert all(isinstance(page, InfoPageCreate) for page in ret)
+    # When:
+    ret = prompt_executor.execute_typed_list("book_list", Book)
+    # Then: A InfoPageCreate objects is returned after conversion
+    assert all(isinstance(book, Book) for book in ret)
+
+
+def test_execute_list(prompt_executor: PromptExecutor, mocker_ai_model: MockerAIModel):
+    mocker_ai_model.add_calls(
+        [
+            {
+                "system_prompt": "",
+                "message_str": "Return a list of Harry Potter book release years.",
+                "response": {"content": '{"list":[1997,1998,1999,2000,2003,2005,2007]}'},
+            }
+        ]
+    )
+    # When:
+    ret = prompt_executor.execute_list("book_years", int)
+    # Then: A InfoPageCreate objects is returned after conversion
+    assert all(isinstance(year, int) for year in ret)
 
 
 def test_execute_with_blob(prompt_executor: PromptExecutor, mocker_ai_model: MockerAIModel):
@@ -123,5 +100,4 @@ def test_execute_with_blob(prompt_executor: PromptExecutor, mocker_ai_model: Moc
     # When:
     ret = prompt_executor.execute("picture_descriptor", blobs=[blob])
     # Then: A InfoPageCreate objects is returned after conversion
-    assert ret.content
-    assert "dog" in ret.content.lower()
+    assert "dog" in ret.lower()

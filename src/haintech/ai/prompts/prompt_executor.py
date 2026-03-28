@@ -1,12 +1,13 @@
-import json
 import logging
 from typing import Callable, Literal, Type
 
 from ampf.base import Blob, BlobLocation
 
-from haintech.ai import AIChatResponse, AIModelInteractionMessage, BaseAIModel
+from haintech.ai import BaseAIModel
 from haintech.ai.model import AIModelInteraction
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel
+
+from haintech.ai.prompts.prompt_model import BaseOutput
 
 from .prompt_service import PromptService
 
@@ -27,52 +28,41 @@ class PromptExecutor:
     def execute(
         self,
         prompt_name: str,
-        response_format: Literal["text", "json"] = "text",
+        response_format: Literal["text", "json"] | dict = "text",
         blob_locations: list[BlobLocation] | None = None,
         blobs: list[Blob] | None = None,
         **kwargs,
-    ) -> AIChatResponse:
+    ) -> str:
         system, user = self.prompt_service.render(prompt_name, **kwargs)
-        m_resp = self.ai_model.get_chat_response(
+        resp = self.ai_model.get_response(
             system_prompt=system,
-            message=AIModelInteractionMessage(role="user", content=user, blob_locations=blob_locations or [], blobs=blobs),
+            message=user, 
+            blob_locations=blob_locations , 
+            blobs=blobs,
             response_format=response_format,
-            interaction_logger=self.interaction_logger,
         )
-        if m_resp.content is None:
-            raise ValueError(f"AI model returned empty content for prompt: {prompt_name}")
-        return m_resp
+        return resp
 
-    def execute_list(
+
+    def execute_list[T: str | int | float | bool](
         self,
         prompt_name: str,
+        type: Type[T] = str,
         blob_locations: list[BlobLocation] | None = None,
         blobs: list[Blob] | None = None,
         **kwargs,
-    ) -> list[str]:
-        response = self.execute(
-            prompt_name, response_format="json", blob_locations=blob_locations, blobs=blobs, **kwargs
+    ) -> list[T]:
+        
+        system, user = self.prompt_service.render(prompt_name, **kwargs)
+        resp = self.ai_model.get_response_list(
+            system_prompt=system,
+            message=user, 
+            blob_locations=blob_locations , 
+            blobs=blobs,
+            type=type,
         )
-        return self._prepare_response_list(response)
+        return resp        
 
-    def _prepare_response_list(self, m_resp: AIChatResponse) -> list[str]:
-        if m_resp.content is None:
-            raise ValueError("AI model returned empty content")
-
-        try:
-            ret = json.loads(m_resp.content)
-            if isinstance(ret, dict) and len(ret) == 1:
-                ret = list(ret.values())[0]
-            if isinstance(ret, dict) and all(isinstance(v, list) for v in ret.values()):
-                return sum(ret.values(), [])
-            if isinstance(ret, list):
-                return ret
-            else:
-                raise ValueError(f"Invalid response format: {m_resp.content}")
-        except (json.JSONDecodeError, ValidationError) as e:
-            _log.warning(e)
-            _log.warning("JSON content: %s", m_resp.content)
-            raise e
 
     def execute_typed[T: BaseModel](
         self,
@@ -87,38 +77,20 @@ class PromptExecutor:
             json_schema = output_class.model_json_schema()
         else:
             json_schema = clazz.model_json_schema()
-        for attempt in range(3):
-            try:
-                response = self.execute(
-                    prompt_name,
-                    response_format="json",
-                    json_schema=json_schema,
-                    blob_locations=blob_locations,
-                    blobs=blobs,
-                    **kwargs,
-                )
-                if output_class:
-                    ret = self._prepare_response_typed(output_class, response)
-                    return ret.convert(**kwargs)
-                else:
-                    return self._prepare_response_typed(clazz, response)
-            except (json.JSONDecodeError, ValidationError) as e:
-                if attempt == 2:
-                    raise e
-        raise ValueError(f"Invalid response format: {response.content}")
-
-    def _prepare_response_typed[T: BaseModel](self, clazz: Type[T], m_resp: AIChatResponse) -> T:
-        if m_resp.content is None:
-            raise ValueError("AI model returned empty content")
-        try:
-            response = json.loads(m_resp.content)
-            if isinstance(response, list) and len(response) == 1:
-                response = response[0]
-            return clazz.model_validate(response)
-        except (json.JSONDecodeError, ValidationError) as e:
-            _log.warning(e)
-            _log.warning("JSON content: %s", m_resp.content)
-            raise e
+        kwargs["json_schema"] = json_schema
+        system, user = self.prompt_service.render(prompt_name, **kwargs)
+        ret = self.ai_model.get_response_typed(
+            system_prompt=system,
+            message=user, 
+            blob_locations=blob_locations , 
+            blobs=blobs,
+            response_format=output_class or clazz,
+        )
+        if output_class and isinstance(ret, BaseOutput):
+            return ret.convert(**kwargs)
+        elif isinstance(ret, clazz):
+            return ret
+        raise ValueError(f"Invalid response format: {ret}")
 
     def execute_typed_list[T: BaseModel](
         self,
@@ -129,30 +101,13 @@ class PromptExecutor:
         **kwargs,
     ) -> list[T]:
         json_schema = {"type": "array", "items": clazz.model_json_schema()}
-        response = self.execute(
-            prompt_name,
-            response_format="json",
-            json_schema=json_schema,
-            blob_locations=blob_locations,
+        kwargs["json_schema"] = json_schema
+        system, user = self.prompt_service.render(prompt_name, **kwargs)
+        ret = self.ai_model.get_response_list_typed(
+            system_prompt=system,
+            message=user, 
+            blob_locations=blob_locations , 
             blobs=blobs,
-            **kwargs,
+            response_format= clazz,
         )
-        return self._prepare_response_typed_list(clazz, response)
-
-    def _prepare_response_typed_list[T: BaseModel](self, clazz: Type[T], m_resp: AIChatResponse) -> list[T]:
-        if m_resp.content is None:
-            raise ValueError("AI model returned empty content")
-        try:
-            response = json.loads(m_resp.content)
-            if isinstance(response, dict) and len(response) == 1:
-                response = list(response.values())[0]
-            elif isinstance(response, dict) and len(response) == 2 and "items" in response:
-                response = response.get("items", [])
-            ret = []
-            for j in response:
-                ret.append(clazz.model_validate(j))
-            return ret
-        except (json.JSONDecodeError, ValidationError) as e:
-            _log.warning(e)
-            _log.warning("JSON content: %s", m_resp.content)
-            raise e
+        return ret
