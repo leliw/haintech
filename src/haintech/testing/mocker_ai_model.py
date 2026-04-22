@@ -107,6 +107,7 @@ class MockerAIModel:
             json.dumps(
                 [call.model_dump(mode="python", exclude_none=True, exclude_unset=True) for call in self.responses],
                 indent=2,
+                ensure_ascii=False,
             )
         )
         assert False
