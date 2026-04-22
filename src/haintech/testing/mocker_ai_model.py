@@ -107,6 +107,7 @@ class MockerAIModel:
             json.dumps(
                 [call.model_dump(mode="python", exclude_none=True, exclude_unset=True) for call in self.responses],
                 indent=2,
+                ensure_ascii=False,
             )
         )
         assert False
@@ -152,7 +153,7 @@ class MockerAIModel:
         message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
-        response_format: Literal["text", "json"] = "text",
+        response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         history = list(history or [])
         if history and history[-1].role == "tool":

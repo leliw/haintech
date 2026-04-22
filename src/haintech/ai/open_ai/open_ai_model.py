@@ -27,6 +27,7 @@ class OpenAIModel(BaseAIModel):
     """OpenAI implementation of BaseAIModel"""
 
     _configured = False
+
     @classmethod
     def setup(cls):
         if not cls._configured:
@@ -49,8 +50,8 @@ class OpenAIModel(BaseAIModel):
     @classmethod
     def get_model_names(cls) -> List[str]:
         cls.setup()
-        return [m.id for m in cls.openai.models.list().data] 
-    
+        return [m.id for m in cls.openai.models.list().data]
+
     @override
     def get_chat_response(
         self,
@@ -60,7 +61,7 @@ class OpenAIModel(BaseAIModel):
         message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
-        response_format: Literal["text", "json"] = "text",
+        response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         if not isinstance(history, list):
             history = list(history or [])
@@ -89,7 +90,7 @@ class OpenAIModel(BaseAIModel):
         message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
-        response_format: Literal["text", "json"] = "text",
+        response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         if not isinstance(history, list):
             history = list(history or [])
@@ -116,7 +117,7 @@ class OpenAIModel(BaseAIModel):
         context: Optional[AIContext] = None,
         message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
-        response_format: Literal["text", "json"] = "text",
+        response_format: Literal["text", "json"] | dict = "text",
     ):
         msg_list = []
         if system_prompt:
@@ -133,7 +134,7 @@ class OpenAIModel(BaseAIModel):
             for m in history:
                 msg_list.append(self._create_message(m))
             if isinstance(message, str):
-                message = AIModelInteractionMessage(role="user", content=message)        
+                message = AIModelInteractionMessage(role="user", content=message)
 
         if context:
             msg_list.append(
@@ -147,10 +148,15 @@ class OpenAIModel(BaseAIModel):
                 tools.append(ChatCompletionToolParam(type="function", function=definition))
         else:
             tools = None
-        if response_format == "json":
-            response_format_dict = {"type": "json_object"}
-        else:
+
+        if response_format == "text":
             response_format_dict = {"type": "text"}
+        elif response_format == "json":
+            response_format_dict = {"type": "json_object"}
+        elif isinstance(response_format, dict):
+            response_format_dict = response_format
+        else:
+            raise ValueError(f"Unsupported response format: {response_format}")
 
         ai_model_interaction = AIModelInteraction(
             model=self.model_name,
@@ -161,7 +167,9 @@ class OpenAIModel(BaseAIModel):
             tools=tools,
             response_format=response_format_dict,
         )
-        parameters_dict = self.parameters.get_for_model(self.model_name) if isinstance(self.parameters, OpenAIParameters) else {}
+        parameters_dict = (
+            self.parameters.get_for_model(self.model_name) if isinstance(self.parameters, OpenAIParameters) else {}
+        )
         return (
             {
                 "model": self.model_name,

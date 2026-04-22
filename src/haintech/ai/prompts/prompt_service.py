@@ -43,10 +43,10 @@ class PromptService:
                             if issubclass(attribute, BaseOutput) and attribute is not BaseOutput:
                                 output_class = attribute
                                 break
-            if system_path.exists() and user_path.exists():
+            if user_path.exists():
                 return PromptSet(
                     name=prompt_path.name,
-                    system=self.env.get_template(f"{prompt_path.name}/system.jinja"),
+                    system=self.env.get_template(f"{prompt_path.name}/system.jinja") if system_path.exists() else None,
                     user=self.env.get_template(f"{prompt_path.name}/user.jinja"),
                     output_class=output_class,
                     version="1.0.0",

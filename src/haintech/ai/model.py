@@ -129,7 +129,7 @@ class AIModelInteraction[T: AIModelInteractionMessage](BaseModel):
     model: str
     tools: Optional[List[AIModelInteractionTool]] = None
     parallel_tool_calls: Optional[bool] = None
-    response_format: Optional[Dict[str, str]] = None
+    response_format: dict | None  = None
     context: Optional[AIContext] = None
     prompt: Optional[str | AIPrompt] = None
     history: List[T]

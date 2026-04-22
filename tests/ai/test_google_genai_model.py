@@ -1,3 +1,4 @@
+from pydantic import BaseModel
 import pytest
 from ampf.local import LocalFactory
 
@@ -103,3 +104,86 @@ async def test_get_chat_response_async_with_unsuported_blob(file_name: str):
             system_prompt="You are a helpful assistant.",
             message=AIModelInteractionMessage(role="user", content="What is my dog's breed?", blobs=[blob]),
         )
+
+
+class Book(BaseModel):
+    title: str
+    author: str
+    year: int
+    genre: str
+
+
+def test_get_response(ai_model: GoogleAIModel):
+    # When: Get text response from ai model
+    ret = ai_model.get_response("Return first Harry Potter book. ")
+    # Then: Text is returned
+    assert "Harry Potter" in ret
+
+
+def test_get_response_typed(ai_model: GoogleAIModel):
+    # When: Get typed response from ai model
+    ret = ai_model.get_response_typed("Return first Harry Potter book. (in json format)", Book)
+    # Then: Object is returned with the response
+    assert isinstance(ret, Book)
+    assert "Harry Potter" in ret.title
+
+
+def test_get_response_list_typed(ai_model: GoogleAIModel):
+    # When: Get typed list response from ai model
+    ret = ai_model.get_response_list_typed("Return list of Harry Potter books. (in json format)", Book)
+    # Then: List of objects is returned with the response
+    assert all("Harry Potter" in b.title for b in ret)
+
+
+def test_get_response_list_str(ai_model: GoogleAIModel):
+    # When: Get list response from ai model
+    ret = ai_model.get_response_list("Return list of Harry Potter books. (in json format)")
+    # Then: List of strings is returned with the response
+    assert all("Harry Potter" in b for b in ret)
+
+def test_get_response_list_ints(ai_model: GoogleAIModel):
+    # When: Get list response from ai model
+    ret = ai_model.get_response_list("Return a list of Harry Potter book release years. (in json format)", int)
+    # Then: List of strings is returned with the response
+    assert any(1998 == b for b in ret)
+
+
+
+@pytest.mark.asyncio
+async def test_get_response_async(ai_model: GoogleAIModel):
+    # When: Get text response from ai model
+    ret = await ai_model.get_response_async("Return the first Harry Potter book title. ")
+    # Then: Text is returned
+    assert "Harry Potter" in ret
+
+
+@pytest.mark.asyncio
+async def test_get_response_typed_async(ai_model: GoogleAIModel):
+    # When: Get typed response from ai model
+    ret = await ai_model.get_response_typed_async("Return the first Harry Potter book. (in json format)", Book)
+    # Then: Object is returned with the response
+    assert isinstance(ret, Book)
+    assert "Harry Potter" in ret.title
+
+
+@pytest.mark.asyncio
+async def test_get_response_list_typed_async(ai_model: GoogleAIModel):
+    # When: Get typed list response from ai model
+    ret = await ai_model.get_response_list_typed_async("Return list of Harry Potter books. (in json format)", Book)
+    # Then: List of objects is returned with the response
+    assert all("Harry Potter" in b.title for b in ret)
+
+
+@pytest.mark.asyncio
+async def test_get_response_list_str_async(ai_model: GoogleAIModel):
+    # When: Get list response from ai model
+    ret = await ai_model.get_response_list_async("Return list of Harry Potter books. (in json format)")
+    # Then: List of strings is returned with the response
+    assert all("Harry Potter" in b for b in ret)
+
+@pytest.mark.asyncio
+async def test_get_response_list_ints_async(ai_model: GoogleAIModel):
+    # When: Get list response from ai model
+    ret = await ai_model.get_response_list_async("Return a list of Harry Potter book release years. (in json format)", int)
+    # Then: List of strings is returned with the response
+    assert any(1998 == b for b in ret)

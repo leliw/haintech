@@ -1,6 +1,6 @@
 import logging
 import re
-from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, override
+from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Sequence, Type, override
 
 from google import genai
 from google.genai.types import (
@@ -18,10 +18,11 @@ from google.genai.types import (
     Schema,
     Tool,
     ToolListUnion,
-    Type,
 )
+from pydantic import BaseModel
 
 from haintech.ai.exceptions import UnsupportedMimeTypeError
+from haintech.helpers import get_inner_type, is_list_type
 
 from ..base import BaseAIModel
 from ..model import (
@@ -83,6 +84,42 @@ class GoogleAIModel(BaseAIModel):
         return ret
 
     @override
+    def _prepare_response_format(
+        self,
+        response_format: Literal["text", "json"]
+        | Type[Sequence[BaseModel | str | int | float | bool]]
+        | Type[BaseModel] = "text",
+    ) -> dict:
+        if response_format == "text":
+            ret = {"type": "text"}
+        elif response_format == "json":
+            ret = {"type": "json_object"}
+        elif isinstance(response_format, type) and issubclass(response_format, BaseModel):
+            ret = response_format.model_json_schema()
+        elif is_list_type(response_format):
+            inner_type = get_inner_type(response_format)
+            if inner_type is str:
+                inner_ret = {"type": "array", "items": {"type": "string"}}
+            elif inner_type is int:
+                inner_ret = {"type": "array", "items": {"type": "integer"}}
+            elif inner_type is float:
+                inner_ret = {"type": "array", "items": {"type": "number"}}
+            elif inner_type is bool:
+                inner_ret = {"type": "array", "items": {"type": "boolean"}}
+            elif issubclass(inner_type, BaseModel):
+                inner_ret = {"type": "array", "items": inner_type.model_json_schema()}
+            else:
+                raise ValueError(f"Unsupported inner response format: {inner_type}")
+            ret = {
+                "type": "object",
+                "properties": {"list": inner_ret},
+                "additionalProperties": False,
+            }
+        else:
+            raise ValueError(f"Unsupported response format: {response_format}")
+        return ret
+
+    @override
     def get_chat_response(
         self,
         system_prompt: str | None = None,
@@ -91,7 +128,7 @@ class GoogleAIModel(BaseAIModel):
         message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
-        response_format: Literal["text", "json"] = "text",
+        response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         history = list(history or [])
         parameters = self._prepare_parameters(system_prompt, history, context, message, functions, response_format)
@@ -117,7 +154,7 @@ class GoogleAIModel(BaseAIModel):
         message: Optional[AIModelInteractionMessage] = None,
         functions: Optional[Dict[Callable, Any]] = None,
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
-        response_format: Literal["text", "json"] = "text",
+        response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         history = list(history or [])
         parameters = self._prepare_parameters(system_prompt, history, context, message, functions, response_format)
@@ -141,7 +178,7 @@ class GoogleAIModel(BaseAIModel):
         context: AIContext | None,
         message: AIModelInteractionMessage | None,
         functions: Dict[Callable, Any] | None,
-        response_format: Literal["text", "json"] = "text",
+        response_format: Literal["text", "json"] | dict = "text",
     ) -> Dict[str, Any]:
         if not self._configured:
             self.setup()
@@ -169,6 +206,7 @@ class GoogleAIModel(BaseAIModel):
             **self.parameters.model_dump(exclude_none=True),
             system_instruction=system_instructions,
             response_mime_type="text/plain" if response_format == "text" else "application/json",
+            response_json_schema=response_format if isinstance(response_format, dict) else None,
             tools=tools,
             automatic_function_calling=AutomaticFunctionCallingConfig(disable=True),
         )
@@ -250,11 +288,14 @@ class GoogleAIModel(BaseAIModel):
         """
         if i_message.role == "tool":
             return cls._create_content_from_function_response(i_message)
-        parts = [Part(text=i_message.content)] if i_message.content else []
+        parts = []
         text_blob_contents = ""
         for blob in i_message.blobs or []:
-            _log.warning("name=%s, type=%s", blob.name, blob.content_type)
-            if blob.content_type and blob.content_type.startswith("text/"):
+            _log.debug("name=%s, type=%s", blob.name, blob.content_type)
+            is_text = (blob.content_type and blob.content_type.startswith("text/")) or (
+                blob.content and b"\x00" not in blob.content
+            )
+            if is_text:
                 text_blob_contents += f"\n<file {'name="' + blob.name + '"' if blob.name else ''}>\n"
                 text_blob_contents += blob.content.decode("utf-8")
                 text_blob_contents += "\n</file>\n"
@@ -262,8 +303,11 @@ class GoogleAIModel(BaseAIModel):
                 parts.append(Part(inline_data=Blob(data=blob.content, mime_type=blob.content_type)))
         if text_blob_contents:
             parts.append(Part(text=text_blob_contents))
+            # parts[0].text += text_blob_contents
         for f in cls._create_parts_from_tool_calls(i_message):
             parts.append(f)
+        if i_message.content:
+            parts.append(Part(text=i_message.content))
         return Content(
             role="model" if i_message.role == "assistant" else "user",
             parts=parts,
@@ -316,11 +360,11 @@ class GoogleAIModel(BaseAIModel):
     @classmethod
     @override
     def model_function_definition(cls, ai_function: AIFunction) -> FunctionDeclaration:
-        parameters = Schema(type=Type.OBJECT, properties={}, required=[])
+        parameters = Schema(type=genai.types.Type.OBJECT, properties={}, required=[])
         assert parameters.properties is not None
         assert parameters.required is not None
         for param in ai_function.parameters:
-            parameters.properties[param.name] = Schema(type=Type.STRING, description=param.description)
+            parameters.properties[param.name] = Schema(type=genai.types.Type.STRING, description=param.description)
             if param.required:
                 parameters.required.append(param.name)
         return FunctionDeclaration(
@@ -384,16 +428,16 @@ class GoogleAIModel(BaseAIModel):
             Returns:
                 A FunctionDefinition object representing the tool.
             """
-            parameters = Schema(type=Type.OBJECT, properties={}, required=[])
+            parameters = Schema(type=genai.types.Type.OBJECT, properties={}, required=[])
             assert parameters.properties is not None
             for param_name, param in tool.inputSchema["properties"].items():
                 match param["type"]:
                     case "integer":
-                        type = Type.INTEGER
+                        type = genai.types.Type.INTEGER
                     case "boolean":
-                        type = Type.BOOLEAN
+                        type = genai.types.Type.BOOLEAN
                     case _:
-                        type = Type.STRING
+                        type = genai.types.Type.STRING
                 parameters.properties[param_name] = Schema(type=type)
             parameters.required = tool.inputSchema["required"] if "required" in tool.inputSchema else []
             return FunctionDeclaration(

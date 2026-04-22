@@ -13,14 +13,14 @@ class BaseOutput[T: BaseModel](BaseModel, ABC):
 @dataclass
 class PromptSet:
     name: str
-    system: Template
+    system: Template | None
     user: Template
     output_class: Type[BaseOutput] | None = None
     version: str = "1.0.0"
 
     def render(self, **kwargs) -> tuple[str, str]:
         """Returns (system_prompt, user_prompt) ready for OpenAI/VertexAI messages"""
-        system = self.system.render(**kwargs)
+        system = self.system.render(**kwargs) if self.system else ""
         user = self.user.render(**kwargs)
         return system.strip(), user.strip()
 
