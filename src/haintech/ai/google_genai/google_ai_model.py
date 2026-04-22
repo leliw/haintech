@@ -288,11 +288,14 @@ class GoogleAIModel(BaseAIModel):
         """
         if i_message.role == "tool":
             return cls._create_content_from_function_response(i_message)
-        parts = [Part(text=i_message.content)] if i_message.content else []
+        parts = []
         text_blob_contents = ""
         for blob in i_message.blobs or []:
-            _log.warning("name=%s, type=%s", blob.name, blob.content_type)
-            if blob.content_type and blob.content_type.startswith("text/"):
+            _log.debug("name=%s, type=%s", blob.name, blob.content_type)
+            is_text = (blob.content_type and blob.content_type.startswith("text/")) or (
+                blob.content and b"\x00" not in blob.content
+            )
+            if is_text:
                 text_blob_contents += f"\n<file {'name="' + blob.name + '"' if blob.name else ''}>\n"
                 text_blob_contents += blob.content.decode("utf-8")
                 text_blob_contents += "\n</file>\n"
@@ -300,8 +303,11 @@ class GoogleAIModel(BaseAIModel):
                 parts.append(Part(inline_data=Blob(data=blob.content, mime_type=blob.content_type)))
         if text_blob_contents:
             parts.append(Part(text=text_blob_contents))
+            # parts[0].text += text_blob_contents
         for f in cls._create_parts_from_tool_calls(i_message):
             parts.append(f)
+        if i_message.content:
+            parts.append(Part(text=i_message.content))
         return Content(
             role="model" if i_message.role == "assistant" else "user",
             parts=parts,
