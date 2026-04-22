@@ -13,21 +13,22 @@ from haintech.ai import (
 )
 from haintech.ai.anthropic import AnthropicAIModel
 from haintech.ai.deep_seek.deep_seek_ai_model import DeepSeekAIModel
-from haintech.ai.google_generativeai import GoogleAIModel, GoogleAITextEmbeddingModel
-from haintech.ai.google_genai import GoogleAIModel as GenAIModel
+from haintech.ai.google_generativeai import GoogleAITextEmbeddingModel
+from haintech.ai.google_genai import GoogleAIModel
 from haintech.ai.hugging_face import HuggingFaceTextEmbeddingModel
 from haintech.ai.open_ai import OpenAIModel, OpenAITextEmbeddingModel
-from google.generativeai.client import configure as genai_configure
+
 
 @pytest.fixture(
-    params=[OpenAIModel, GoogleAIModel, GenAIModel, DeepSeekAIModel, AnthropicAIModel],
+    params=[OpenAIModel, GoogleAIModel, DeepSeekAIModel, AnthropicAIModel],
     # params=[GenAIModel],
     scope="function",
 )
 def ai_model(request: pytest.FixtureRequest) -> BaseAIModel:
     if request.param == GoogleAIModel:
-        genai_configure()
-    return request.param(parameters={"temperature": 0})
+        return GoogleAIModel(model_name="gemini-3-flash-preview", parameters={"temperature": 0})
+    else:
+        return request.param(parameters={"temperature": 0})
 
 
 @pytest.fixture(

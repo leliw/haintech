@@ -1,4 +1,4 @@
-import asyncio
+import inspect
 import logging
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
 
@@ -101,8 +101,13 @@ class BaseAIAgentAsync(BaseAIChatAsync):
             )
         except Exception as e:
             _log.error(e)
-            _log.error(history)
-            _log.error(message)
+            e_mes = "=====>\n"
+            for h in history:
+                e_mes += f"{h.model_dump_json(indent=2, exclude_none=True, exclude_defaults=True)},\n"
+            if message:
+                e_mes += message.model_dump_json(indent=2, exclude_none=True, exclude_defaults=True)
+            e_mes += "\n<===="
+            _log.warning(e_mes)
             raise e
         if message and self.session:
             # Clear blobs from history to save memory
@@ -154,13 +159,13 @@ class BaseAIAgentAsync(BaseAIChatAsync):
                 await self.call_function(id, name, **arguments)
             else:
                 self._log.debug("Refused calling: %s : %s with arguments: %s", id, name, arguments)
-                # self.add_message(
-                #     AIModelInteractionMessage(
-                #         tool_call_id=id,
-                #         role="tool",
-                #         content="The user refused execution.",
-                #     )
-                # )
+                self.add_message(
+                    AIModelInteractionMessage(
+                        tool_call_id=id,
+                        role="tool",
+                        content="The user refused execution.",
+                    )
+                )
         resp = await self.get_response()
         return resp
 
@@ -186,7 +191,7 @@ class BaseAIAgentAsync(BaseAIChatAsync):
                 self._log.debug("Function: %s", f.__name__)
             raise ValueError(f"Function {name} not found")
         try:
-            if asyncio.iscoroutinefunction(function):
+            if inspect.iscoroutinefunction(function):
                 ret = await function(**arguments)
             else:
                 ret = function(**arguments)

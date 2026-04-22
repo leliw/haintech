@@ -67,7 +67,7 @@ async def test_agent_with_acceptance(ai_model: BaseAIModel, session):
     ai_agent = HRAgent(ai_model=ai_model, session=session)
     # When: I ask agent
     response = await ai_agent.get_response("How many vacation days do I have left in 2025?")
-    # Then: I shult get function call
+    # Then: I should get function call
     assert response.tool_calls
     assert 1 == len(response.tool_calls)
     assert response.tool_calls[0].id
@@ -78,3 +78,26 @@ async def test_agent_with_acceptance(ai_model: BaseAIModel, session):
     # Then: I should get answer
     assert response.content
     assert "26" in response.content
+
+
+@pytest.mark.asyncio
+async def test_agent_without_acceptance(ai_model: BaseAIModel, session):
+    # STEP: 1
+    # =======
+    # Given: An agent with session and tools
+    ai_agent = HRAgent(ai_model=ai_model, session=session)
+    # When: I ask agent
+    response = await ai_agent.get_response("How many vacation days do I have left in 2025?")
+    # Then: I should get function call
+    assert response.tool_calls
+    assert 1 == len(response.tool_calls)
+    assert response.tool_calls[0].id
+    # STEP: 2
+    # =======
+    # When: I refuse function call
+    response = await ai_agent.accept_tools([])
+    # Then: I should get answer
+    assert response.content
+    refusal_messages = ["I cannot", "I'm unable", "I wasn't able", "I don't have", "I apologize"]
+    print(response.content)
+    assert any(msg in response.content for msg in refusal_messages)

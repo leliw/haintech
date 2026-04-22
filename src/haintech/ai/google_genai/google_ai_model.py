@@ -1,3 +1,4 @@
+import base64
 import logging
 import re
 from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Sequence, Type, override
@@ -354,7 +355,11 @@ class GoogleAIModel(BaseAIModel):
         if not i_message.tool_calls:
             return []
         return (
-            Part(function_call=FunctionCall(name=tc.function_name, args=tc.arguments)) for tc in i_message.tool_calls
+            Part(
+                function_call=FunctionCall(name=tc.function_name, args=tc.arguments),
+                thought_signature=base64.b64decode(tc.thought_signature) if tc.thought_signature else None,
+            )
+            for tc in i_message.tool_calls
         )
 
     @classmethod
@@ -405,6 +410,9 @@ class GoogleAIModel(BaseAIModel):
                         id=tool_id,
                         function_name=name,  # type: ignore
                         arguments=dict(fc.args),  # type: ignore
+                        thought_signature=base64.b64encode(part.thought_signature).decode("utf-8")
+                        if part.thought_signature
+                        else None,
                     )
                 )
             if part.text:
@@ -433,12 +441,12 @@ class GoogleAIModel(BaseAIModel):
             for param_name, param in tool.inputSchema["properties"].items():
                 match param["type"]:
                     case "integer":
-                        type = genai.types.Type.INTEGER
+                        param_type = genai.types.Type.INTEGER
                     case "boolean":
-                        type = genai.types.Type.BOOLEAN
+                        param_type = genai.types.Type.BOOLEAN
                     case _:
-                        type = genai.types.Type.STRING
-                parameters.properties[param_name] = Schema(type=type)
+                        param_type = genai.types.Type.STRING
+                parameters.properties[param_name] = Schema(type=param_type)
             parameters.required = tool.inputSchema["required"] if "required" in tool.inputSchema else []
             return FunctionDeclaration(
                 name=tool.name,

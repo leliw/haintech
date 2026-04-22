@@ -39,6 +39,7 @@ class AIModelToolCall(BaseModel):
     id: Optional[str] = None
     function_name: str
     arguments: Dict[str, Any]
+    thought_signature: str | None = Field(None, description="Thought signature required by Google API")
 
     def __str__(self):
         return f"{self.id}: {self.function_name}({', '.join([f'{k}="{v}"' for k, v in self.arguments.items()])})"
@@ -222,10 +223,9 @@ class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
         ret = ""
         for m in self.messages_iterator():
             ret += str(m) + "\n"
-        if m:
-            last_response = self.get_last_response()
-            if last_response:
-                ret += str(last_response) + "\n"
+        last_response = self.get_last_response()
+        if last_response:
+            ret += str(last_response) + "\n"
         return ret
 
 
@@ -325,10 +325,9 @@ class AIMultiagentSession[T: AIModelInteractionMessage](BaseModel, AIModelSessio
         ret = ""
         for m in self.messages_iterator():
             ret += str(m) + "\n"
-        if m:
-            last_response = self.get_last_response()
-            if last_response:
-                ret += str(last_response) + "\n"
+        last_response = self.get_last_response()
+        if last_response:
+            ret += str(last_response) + "\n"
         return ret
 
 
