@@ -8,5 +8,17 @@
     "workbench.preferredDarkColorTheme": "Solarized Dark",
     "debugpy.debugJustMyCode": false,
     "window.autoDetectColorScheme": true,
-    "ruff.lineLength": 120
+    "ruff.lineLength": 120,
+    "files.exclude": {
+        "**/.pytest_cache/": true,
+        "**/__pycache__/": true,
+        "**/.ruff_cache/": true,
+        "**/*.egg-info/": true,
+        "**/.venv/": true,
+        "**/.vscode/": true,
+        "**/.coverage/": true,
+        "**/uv.lock/": true,
+        "**/.python-version/": true,
+        "dist/**": true,
+    }
 }
