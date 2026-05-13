@@ -1,4 +1,7 @@
+import logging
+
 import pytest
+from ampf.local import LocalFactory
 from pydantic import BaseModel
 
 from haintech.ai.model import AIModelInteractionMessage
@@ -60,12 +63,12 @@ def test_get_response_list_str(ai_model: OpenAIModel):
     # Then: List of strings is returned with the response
     assert all("Harry Potter" in b for b in ret)
 
+
 def test_get_response_list_ints(ai_model: OpenAIModel):
     # When: Get list response from ai model
     ret = ai_model.get_response_list("Return list of release years of Harry Potter books. (in json format)", int)
     # Then: List of strings is returned with the response
     assert any(1998 == b for b in ret)
-
 
 
 @pytest.mark.asyncio
@@ -100,9 +103,29 @@ async def test_get_response_list_str_async(ai_model: OpenAIModel):
     # Then: List of strings is returned with the response
     assert all("Harry Potter" in b for b in ret)
 
+
 @pytest.mark.asyncio
 async def test_get_response_list_ints_async(ai_model: OpenAIModel):
     # When: Get list response from ai model
-    ret = await ai_model.get_response_list_async("Return list of release years of Harry Potter books. (in json format)", int)
+    ret = await ai_model.get_response_list_async(
+        "Return list of release years of Harry Potter books. (in json format)", int
+    )
     # Then: List of strings is returned with the response
     assert any(1998 == b for b in ret)
+
+
+def test_get_chat_response_with_text_blob():
+    logging.getLogger("haintech.ai.open_ai.open_ai_model").setLevel(logging.DEBUG)
+    # Given: Google AI Model
+    ai_model = OpenAIModel("gpt-5.4-nano", parameters=OpenAIParameters(temperature=0))
+    # And: A text blob with answer
+    blob_storage = LocalFactory("./tests/data").create_blob_storage("")
+    blob_storage.default_ext = None
+    blob = blob_storage.download("answer.txt")
+    # When: Ask for a response
+    response = ai_model.get_chat_response(
+        system_prompt="You are a helpful assistant.",
+        message=AIModelInteractionMessage(role="user", content="What is my dog's breed?", blobs=[blob]),
+    )
+    # Then: The response contains the dog's breed from an answer blob
+    assert response.content and "labrador" in response.content.lower()

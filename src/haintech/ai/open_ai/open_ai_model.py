@@ -170,26 +170,47 @@ class OpenAIModel(BaseAIModel):
         parameters_dict = (
             self.parameters.get_for_model(self.model_name) if isinstance(self.parameters, OpenAIParameters) else {}
         )
-        return (
-            {
-                "model": self.model_name,
-                "messages": msg_list,
-                "tools": tools,
-                "response_format": response_format_dict,
-                **parameters_dict,
-            },
-            ai_model_interaction,
-        )
+        ret = {
+            "model": self.model_name,
+            "messages": msg_list,
+            "tools": tools,
+            "response_format": response_format_dict,
+            **parameters_dict,
+        }
+        if _log.isEnabledFor(logging.DEBUG):
+            _log.debug("===========>\n %s\n <==========", ret)
+        return (ret, ai_model_interaction)
 
     @classmethod
-    def _create_message(cls, interaction_message: AIModelInteractionMessage) -> ChatCompletionMessageParam:
-        ret = {
-            "role": interaction_message.role,
-            "content": interaction_message.content,
+    def _create_message(cls, i_message: AIModelInteractionMessage) -> ChatCompletionMessageParam:
+        text_blob_contents = ""
+        for blob in i_message.blobs or []:
+            _log.debug("name=%s, type=%s", blob.name, blob.content_type)
+            is_text = (blob.content_type and blob.content_type.startswith("text/")) or (
+                blob.content and b"\x00" not in blob.content
+            )
+            if is_text:
+                text_blob_contents += "\n<file>\n"
+                if blob.name:
+                    text_blob_contents += f"<name>{blob.name}</name>\n"
+                text_blob_contents += "<content>\n"
+                text_blob_contents += blob.content.decode("utf-8")
+                text_blob_contents += "\n</content>\n"
+                text_blob_contents += "</file>\n"
+            else:
+                _log.warning("Unsupported blob type: %s", blob.content_type)
+        if i_message.content:
+            if text_blob_contents:
+                text_blob_contents += "\n"
+            text_blob_contents += i_message.content
+
+        ret: dict[str, Any] = {
+            "role": i_message.role,
+            "content": text_blob_contents,
         }
-        if interaction_message.tool_call_id:
-            ret["tool_call_id"] = interaction_message.tool_call_id
-        if interaction_message.tool_calls:
+        if i_message.tool_call_id:
+            ret["tool_call_id"] = i_message.tool_call_id
+        if i_message.tool_calls:
             ret["tool_calls"] = [
                 {
                     "id": tool_call.id,
@@ -199,9 +220,9 @@ class OpenAIModel(BaseAIModel):
                         "arguments": json.dumps(tool_call.arguments),
                     },
                 }
-                for tool_call in interaction_message.tool_calls  # type: ignore
+                for tool_call in i_message.tool_calls  # type: ignore
             ]
-        _log.debug("Creating message: %s", interaction_message)
+        _log.debug("Creating message: %s", i_message)
         return ret  # type: ignore
 
     @classmethod
