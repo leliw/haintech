@@ -212,11 +212,13 @@ class GoogleAIModel(BaseAIModel):
             automatic_function_calling=AutomaticFunctionCallingConfig(disable=True),
         )
 
-        return {
+        ret = {
             "config": config,
             "history": msg_list,
             "message": self._create_content_from_message(message).parts,
         }
+        _log.debug("===========>\n %s\n <==========", ret)
+        return ret
 
     def _get_chat_response(
         self,
@@ -302,13 +304,15 @@ class GoogleAIModel(BaseAIModel):
                 text_blob_contents += "\n</file>\n"
             else:
                 parts.append(Part(inline_data=Blob(data=blob.content, mime_type=blob.content_type)))
-        if text_blob_contents:
-            parts.append(Part(text=text_blob_contents))
-            # parts[0].text += text_blob_contents
         for f in cls._create_parts_from_tool_calls(i_message):
             parts.append(f)
         if i_message.content:
-            parts.append(Part(text=i_message.content))
+            if text_blob_contents:
+                text_blob_contents += "\n"
+            text_blob_contents += i_message.content
+        if text_blob_contents:
+            parts.append(Part(text=text_blob_contents))
+            # parts[0].text += text_blob_contents
         return Content(
             role="model" if i_message.role == "assistant" else "user",
             parts=parts,
@@ -429,7 +433,7 @@ class GoogleAIModel(BaseAIModel):
         def prepare_mcp_tool_definition(self, tool: MCPTool) -> FunctionDeclaration:
             """Creates a FunctionDefinition from an MCP Tool.
 
-            It can be overriden if other models expect different definition
+            It can be overridden if other models expect different definition
 
             Args:
                 tool: The MCP Tool to create the FunctionDefinition from.
