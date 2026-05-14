@@ -1,3 +1,5 @@
+from typing import Iterable, Optional
+
 import pytest
 
 from haintech.ai.anthropic.anthropic_ai_model import AnthropicAIModel
@@ -6,9 +8,9 @@ from haintech.ai.base.base_ai_chat_async import BaseAIChatAsync
 from haintech.ai.base.base_ai_model import BaseAIModel
 from haintech.ai.deep_seek.deep_seek_ai_model import DeepSeekAIModel
 from haintech.ai.google_genai.google_ai_model import GoogleAIModel
-from haintech.ai.model import AIModelInteractionMessage
+from haintech.ai.model import AIChatResponse, AIModelInteractionMessage
 from haintech.ai.open_ai.open_ai_model import OpenAIModel
-from haintech.testing.mocker_ai_model import MockerAIModel, mocker_ai_model  # noqa: F401
+from haintech.testing.mocker_ai_model import GetChatResponse, MockerAIModel, mocker_ai_model  # noqa: F401
 
 
 @pytest.fixture(
@@ -101,3 +103,51 @@ def test_add_calls(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):  # no
     )
     # Then: The mock returns a defined response in the list
     assert response.content == "The first US president was **George Washington**."
+
+
+def test_mock_with_history_ok(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):  # noqa: F811
+    # Given: A mock with two interactions, where the second checks history - it is correct
+    mocker_ai_model.add(
+        message="Who was the first US president?", response="The first US president was **George Washington**."
+    )
+
+    def check_history(history: Optional[Iterable[AIModelInteractionMessage]] = None, **kwargs) -> AIChatResponse:
+        for m in history or []:
+            if m.role == "user" and m.content == "Who was the first US president?":
+                return AIChatResponse(content="John Adams")
+        raise AssertionError("History is wrong!")
+
+    mocker_ai_model.add_call(check_history)
+
+    # When: Get responses twice
+    ai_model.get_chat_response(
+        message=AIModelInteractionMessage(role="user", content="Who was the first US president?")
+    )
+    response = ai_model.get_chat_response(message=AIModelInteractionMessage(role="user", content="Who was the second?"))
+    # Then: The second response is returned
+    assert response.content
+    assert "John Adams" in response.content
+
+
+def test_mock_with_history_err(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):  # noqa: F811
+    # Given: A mock with two interactions, where the second checks history - it is wrong
+    mocker_ai_model.add(
+        message="Who was the first US president?", response="The first US president was **George Washington**."
+    )
+
+    def check_history(history: Optional[Iterable[AIModelInteractionMessage]] = None, **kwargs) -> AIChatResponse:
+        for m in history or []:
+            if m.role == "user" and m.content == "Who was the first Polish president?":
+                return AIChatResponse(content="John Adams")
+        raise AssertionError("History is wrong!")
+
+    mocker_ai_model.add_call(check_history)
+
+    # When: Get responses twice
+    ai_model.get_chat_response(
+        message=AIModelInteractionMessage(role="user", content="Who was the first US president?")
+    )
+    # Then: The second response raises error
+    with pytest.raises(AssertionError) as e:
+        ai_model.get_chat_response(message=AIModelInteractionMessage(role="user", content="Who was the second?"))
+    assert "History is wrong!" in str(e.value)

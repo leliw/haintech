@@ -2,18 +2,19 @@ import base64
 import json
 import logging
 from contextlib import contextmanager
-from typing import Any, Callable, Iterable, Literal, Optional
+from typing import Any, Callable, Iterable, Literal, Optional, Protocol
 
 import pytest
-from haintech.ai import AIChatResponse, AIContext, AIModelInteraction, AIModelInteractionMessage
 from pydantic import BaseModel, field_serializer, field_validator
 from pytest_mock.plugin import MockerFixture
 
+from haintech.ai import AIChatResponse, AIContext, AIModelInteraction, AIModelInteractionMessage
 from haintech.ai.base.base_ai_model import BaseAIModel
+from haintech.ai.model import AIPrompt
 
 try:
-    from haintech.ai.google_generativeai import GoogleAIModel  # noqa: F401
     from haintech.ai.google_genai import GoogleAIModel  # noqa: F401, F811
+    from haintech.ai.google_generativeai import GoogleAIModel  # noqa: F401, F811
 
     GOOGLE_AVAILABLE = True
 except ImportError:
@@ -43,6 +44,20 @@ except ImportError:
 _log = logging.getLogger(__name__)
 
 
+class GetChatResponse(Protocol):
+    def __call__(
+        self,
+        *,
+        system_prompt: Optional[str | AIPrompt] = None,
+        history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        context: Optional[AIContext] = None,
+        message: Optional[AIModelInteractionMessage] = None,
+        functions: Optional[dict[Callable[..., Any], Any]] = None,
+        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        response_format: Literal["text", "json"] | dict[str, Any] = "text",
+    ) -> AIChatResponse: ...
+
+
 class AICall(BaseModel):
     system_prompt: Optional[str] = None
     message_str: Optional[str] = None
@@ -61,16 +76,55 @@ class AICall(BaseModel):
     @classmethod
     def decode_blobs(cls, value: Any) -> Any:
         if isinstance(value, list):
-            return [
-                base64.b64decode(v) if isinstance(v, str) else v
-                for v in value
-            ]
+            return [base64.b64decode(v) if isinstance(v, str) else v for v in value]
         return value
+
+    def __call__(
+        self,
+        system_prompt: Optional[str | AIPrompt] = None,
+        history: Optional[Iterable[AIModelInteractionMessage]] = None,
+        context: Optional[AIContext] = None,
+        message: Optional[AIModelInteractionMessage] = None,
+        functions: Optional[dict[Callable[..., Any], Any]] = None,
+        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        response_format: Literal["text", "json"] | dict[str, Any] = "text",
+    ) -> AIChatResponse:
+        if self.system_prompt:
+            assert system_prompt
+            assert system_prompt == self.system_prompt, (
+                f"Expected system prompt content '{self.system_prompt}', got '{system_prompt}'"
+            )
+
+        if self.message_str:
+            assert message and message.content
+            assert message.content == self.message_str, (
+                f"Expected message content '{self.message_str}', got '{message.content}'"
+            )
+        if self.message_containing:
+            assert message and message.content
+            assert self.message_containing in message.content
+        if self.blob_contents:
+            assert message and message.blobs
+            assert len(self.blob_contents) == len(message.blobs), (
+                f"Expected {len(self.blob_contents)} blobs, got {len(message.blobs)}"
+            )
+            assert all([blob.content in self.blob_contents for blob in message.blobs]), (
+                f"Expected blobs {self.blob_contents}, got {[blob.content for blob in message.blobs]}"
+            )
+        if self.tool_result:
+            history = list(history or [])
+            if history and history[-1].role == "tool":
+                tool_result = history[-1].content
+            else:
+                tool_result = None
+            assert tool_result
+            assert tool_result == self.tool_result, f"Expected tool result '{self.tool_result}', got '{tool_result}'"
+        return self.response
 
 
 class MockerAIModel:
     _mocked_methods: list[str] = []
-    
+
     if GOOGLE_AVAILABLE:
         _mocked_methods.append("haintech.ai.google_generativeai.GoogleAIModel.get_chat_response")
         _mocked_methods.append("haintech.ai.google_generativeai.GoogleAIModel.get_chat_response_async")
@@ -89,7 +143,8 @@ class MockerAIModel:
     def __init__(self, mocker: MockerFixture):
         self.mocker = mocker
         self.org_ai_model = None
-        self.responses: list[AICall] = []
+        self.responses: list[GetChatResponse] = []
+        self._history: list[AIModelInteractionMessage] = []
         self.setup()
 
     def setup(self) -> None:
@@ -105,7 +160,12 @@ class MockerAIModel:
         yield
         print(
             json.dumps(
-                [call.model_dump(mode="python", exclude_none=True, exclude_unset=True) for call in self.responses],
+                [
+                    call.model_dump(mode="python", exclude_none=True, exclude_unset=True)
+                    if isinstance(call, AICall)
+                    else call
+                    for call in self.responses
+                ],
                 indent=2,
                 ensure_ascii=False,
             )
@@ -155,14 +215,15 @@ class MockerAIModel:
         interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
         response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
-        history = list(history or [])
+        history = list(history or self._history)
         if history and history[-1].role == "tool":
             tool_result = history[-1].content
         else:
             tool_result = None
 
         #####################
-
+        if message:
+            self._history.append(message)
         if self.org_ai_model:
             self.mocker.stopall()
             response = self.org_ai_model.get_chat_response(
@@ -174,7 +235,6 @@ class MockerAIModel:
                 interaction_logger=interaction_logger,
                 response_format=response_format,
             )
-
             call = AICall(
                 system_prompt=system_prompt,
                 message_str=message.content if message else None,
@@ -185,39 +245,19 @@ class MockerAIModel:
             _log.info("AI response: %s", response)
             self.responses.append(call)
             self.setup()
-            return response
         elif not self.responses:
             raise RuntimeError("No mocked AI responses available.")
         else:
             call = self.responses.pop(0)
-            if call.system_prompt:
-                assert system_prompt
-                assert system_prompt == call.system_prompt, (
-                    f"Expected system prompt content '{call.system_prompt}', got '{system_prompt}'"
-                )
-
-            if call.message_str:
-                assert message and message.content
-                assert message.content == call.message_str, (
-                    f"Expected message content '{call.message_str}', got '{message.content}'"
-                )
-            if call.message_containing:
-                assert message and message.content
-                assert call.message_containing in message.content
-            if call.blob_contents:
-                assert message and message.blobs
-                assert len(call.blob_contents) == len(message.blobs), (
-                    f"Expected {len(call.blob_contents)} blobs, got {len(message.blobs)}"
-                )
-                assert all([blob.content in call.blob_contents for blob in message.blobs]), (
-                    f"Expected blobs {call.blob_contents}, got {[blob.content for blob in message.blobs]}"
-                )
-            if call.tool_result:
-                assert tool_result
-                assert tool_result == call.tool_result, (
-                    f"Expected tool result '{call.tool_result}', got '{tool_result}'"
-                )
-            response = call.response
+            response = call(
+                system_prompt=system_prompt,
+                history=history,
+                context=context,
+                message=message,
+                functions=functions,
+                interaction_logger=interaction_logger,
+                response_format=response_format,
+            )
 
         ####################
         if interaction_logger:
@@ -230,11 +270,20 @@ class MockerAIModel:
                     response=response,
                 )
             )
+        self._history.append(AIModelInteractionMessage.create_from_response(response))
         return response
 
-    def add_calls(self, calls: list[dict]) -> None:
-        for call in calls:
+    def add_call(self, call: dict | AICall | GetChatResponse) -> None:
+        if isinstance(call, dict):
             self.responses.append(AICall.model_validate(call))
+        elif isinstance(call, AICall):
+            self.responses.append(call)
+        else:
+            self.responses.append(call)
+
+    def add_calls(self, calls: list[dict] | list[AICall]) -> None:
+        for call in calls:
+            self.add_call(call)
 
 
 @pytest.fixture
