@@ -1,3 +1,4 @@
+import asyncio
 import inspect
 import logging
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple
@@ -86,10 +87,15 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         Returns:
             response: LLM response
         """
-        if message:
-            await self.download_blobs(message)
         system_prompt = self.system_prompt
         history = list(self.iter_messages())
+        download_blobs_tasks = []
+        if message:
+            download_blobs_tasks.append(self.download_blobs(message))
+        for m in history:
+            if m.blob_locations:
+                download_blobs_tasks.append(self.download_blobs(m))
+        await asyncio.gather(*download_blobs_tasks)
         try:
             response = await self.ai_model.get_chat_response_async(
                 system_prompt=system_prompt,
@@ -227,9 +233,6 @@ class BaseAIAgentAsync(BaseAIChatAsync):
         if not message.blob_locations:
             return
         if self.session_blob_manager:
-            blobs = []
-            for blob_location in message.blob_locations:
-                blob = await self.session_blob_manager.download_blob(blob_location)
-                _log.warning("name=%s, type=%s", blob.name, blob.content_type)
-                blobs.append(blob)
-            message.blobs = blobs
+            if not message.blobs:
+                message.blobs = []
+            message.blobs.extend(await asyncio.gather(*[self.session_blob_manager.download_blob(blob_location) for blob_location in message.blob_locations]))

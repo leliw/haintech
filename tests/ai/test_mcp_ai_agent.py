@@ -1,6 +1,6 @@
 from ampf.local import LocalAsyncFactory
 from haintech.ai import MCPAIAgent
-from haintech.ai.google_generativeai import GoogleAIModel, GoogleAIParameters
+from haintech.ai.google_genai import GoogleAIModel, GoogleAIParameters
 from haintech.ai.model import AIChatSession, AIModelInteractionMessage
 import pytest
 
@@ -12,7 +12,13 @@ async def test_get_response_with_blob_location(file_name: str):
     factory = LocalAsyncFactory("./tests/data")
     ai_model = GoogleAIModel("gemini-2.5-flash-lite", parameters=GoogleAIParameters(temperature=0))
     session = AIChatSession()
-    ai_agent = MCPAIAgent(ai_model=ai_model, mcp_servers=[], prompt="You are a helpful assistant.", session=session, session_blob_manager=factory)
+    ai_agent = MCPAIAgent(
+        ai_model=ai_model,
+        mcp_servers=[],
+        prompt="You are a helpful assistant.",
+        session=session,
+        session_blob_manager=factory,
+    )
     # And: A blob with answer
     blob_location = factory.create_blob_location(file_name)
     # When: Ask for a response
@@ -27,3 +33,6 @@ async def test_get_response_with_blob_location(file_name: str):
     assert iteration and iteration.message
     assert iteration.message.blob_locations is not None
     assert iteration.message.blobs is None
+
+    response = await ai_agent.get_response(message=AIModelInteractionMessage(role="user", content="What is his name?"))
+    assert response.content and "Szarik" in response.content
