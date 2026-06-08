@@ -48,8 +48,12 @@ class AIModelToolCall(BaseModel):
 class AIChatResponse(BaseModel):
     """Chat response model."""
 
-    content: Optional[str] = None
-    tool_calls: Optional[List[AIModelToolCall]] = None
+    content: str | None = None
+    tool_calls: list[AIModelToolCall] | None = None
+    input_tokens: int | None = None
+    input_tokens_cached: int | None = None
+    reasoning_tokens: int | None = None
+    output_tokens: int | None = None
 
     def __str__(self) -> str:
         ret = []
@@ -167,7 +171,7 @@ class AIModelSession[T: AIModelInteractionMessage](ABC):
 
     @abstractmethod
     def messages_iterator(self) -> Iterator[T]:
-        """Itrerates over all messages (from last interaction)."""
+        """Iterates  over all messages (from last interaction)."""
         pass
 
     def get_last_response(self) -> Optional[T]:
@@ -196,7 +200,7 @@ class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
 
     @override
     def messages_iterator(self) -> Iterator[T]:
-        """Itrerates over all messages (from last interaction)"""
+        """Iterates  over all messages (from last interaction)"""
         last_interaction = self.get_last_interaction()
         if last_interaction:
             for message in last_interaction.history:
@@ -261,7 +265,7 @@ class AIAgentSession[T: AIModelInteractionMessage](AIModelSession[T]):
 
     @override
     def messages_iterator(self) -> Iterator[T]:
-        """Itrerates over all messages (from last interaction)"""
+        """Iterates  over all messages (from last interaction)"""
         if self.interactions:
             for i in reversed(self.interactions):
                 if i.agent_name == self.agent_name:
@@ -271,7 +275,7 @@ class AIAgentSession[T: AIModelInteractionMessage](AIModelSession[T]):
                         yield i.interaction.message
                     if i.interaction.response_message:
                         yield i.interaction.response_message
-                    # I've found the last iteration for the agent
+                    # I've found the last interation for the agent
                     return
 
 
@@ -308,7 +312,7 @@ class AIMultiagentSession[T: AIModelInteractionMessage](BaseModel, AIModelSessio
 
     @override
     def messages_iterator(self) -> Iterator[T]:
-        """Itrerates over all messages (from last interaction)"""
+        """Iterates  over all messages (from last interaction)"""
         if self.interactions:
             for i in reversed(self.interactions):
                 if i.agent_name == self.agent_name:
@@ -318,7 +322,7 @@ class AIMultiagentSession[T: AIModelInteractionMessage](BaseModel, AIModelSessio
                         yield i.interaction.message
                     if i.interaction.response_message:
                         yield i.interaction.response_message
-                    # I've found the last iteration for the agent
+                    # I've found the last interation for the agent
                     return
 
     def __str__(self) -> str:
