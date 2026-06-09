@@ -1,9 +1,17 @@
 import json
 import logging
+from itertools import chain
 from typing import Any, Callable, Dict, Iterable, Literal, Optional, Sequence, Type, override
 
 from openai import AsyncOpenAI, OpenAI
-from openai.types.responses import EasyInputMessageParam, FunctionToolParam, Response
+from openai.types.responses import (
+    EasyInputMessageParam,
+    FunctionToolParam,
+    Response,
+    ResponseFunctionToolCallParam,
+    ResponseInputParam,
+)
+from openai.types.responses.response_input_param import FunctionCallOutput
 from pydantic import BaseModel
 
 from haintech.helpers import get_inner_type, is_list_type
@@ -12,6 +20,7 @@ from ..base import BaseAIModel
 from ..model import (
     AIChatResponse,
     AIContext,
+    AIFunction,
     AIModelInteraction,
     AIModelInteractionMessage,
     AIModelToolCall,
@@ -37,7 +46,7 @@ class ResponsesAIModel(BaseAIModel):
 
     def __init__(
         self,
-        model_name: str = "gpt-4o-mini",
+        model_name: str = "gpt-5.4-nano",
         parameters: ResponsesAIParameters | Dict[str, Any] | None = None,
     ):
         self.setup()
@@ -66,7 +75,7 @@ class ResponsesAIModel(BaseAIModel):
             system_prompt, history, context, message, functions, response_format
         )
         try:
-            resp = self.openai.responses.create(**parameters)
+            resp: Response = self.openai.responses.create(**parameters)
             response = self._create_ai_chat_response(resp)
             return response
         except Exception as e:
@@ -111,45 +120,35 @@ class ResponsesAIModel(BaseAIModel):
         self,
         system_prompt: str | AIPrompt | None,
         history: list[AIModelInteractionMessage],
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[Dict[Callable, Any]] = None,
+        context: AIContext | None = None,
+        message: AIModelInteractionMessage | None = None,
+        functions: dict[Callable, Any] | None = None,
         response_format: Literal["text", "json"] | dict = "text",
     ):
-        msg_list = []
-        if system_prompt:
-            msg_list.append(
-                self._create_message(
-                    AIModelInteractionMessage(role="system", content=self._prompt_to_str(system_prompt))
-                )
+        input = self._create_input(
+            chain(
+                (
+                    [AIModelInteractionMessage(role="system", content=self._prompt_to_str(system_prompt))]
+                    if system_prompt
+                    else []
+                ),
+                history,
+                ([AIModelInteractionMessage(role="system", content=self._context_to_str(context))] if context else []),
+                ([message] if message else []),
             )
-        if not message:
-            message = history[-1]
-            for m in history[:-1]:
-                msg_list.append(self._create_message(m))
-        else:
-            for m in history:
-                msg_list.append(self._create_message(m))
-            if isinstance(message, str):
-                message = AIModelInteractionMessage(role="user", content=message)
+        )
 
-        if context:
-            msg_list.append(
-                self._create_message(AIModelInteractionMessage(role="system", content=self._context_to_str(context)))
-            )
-        msg_list.append(self._create_message(message))
         if functions:
             tools = []
-            for f in functions:
-                definition = functions[f]
-                tools.append(FunctionToolParam(type="function", function=definition))
+            for f, d in functions.items():
+                tools.append(d)
         else:
             tools = None
 
         if response_format == "text":
             response_format_dict = None
         elif response_format == "json":
-            response_format_dict = {"type": "json_object"}
+            response_format_dict = {"format": {"type": "json_object"}}
         elif isinstance(response_format, dict):
             response_format_dict = response_format
         else:
@@ -157,11 +156,11 @@ class ResponsesAIModel(BaseAIModel):
 
         ai_model_interaction = AIModelInteraction(
             model=self.model_name,
-            message=message,
+            message=AIModelInteractionMessage(role="user", content=message) if isinstance(message, str) else message,
             prompt=system_prompt if isinstance(system_prompt, AIPrompt) else None,
             context=context,
             history=history,
-            tools=tools,
+            # tools=tools,
             response_format=response_format_dict,
         )
         parameters_dict = (
@@ -169,7 +168,7 @@ class ResponsesAIModel(BaseAIModel):
         )
         ret = {
             "model": self.model_name,
-            "input": msg_list,
+            "input": input,
             "tools": tools,
             "text": response_format_dict,
             **parameters_dict,
@@ -178,10 +177,54 @@ class ResponsesAIModel(BaseAIModel):
             _log.debug("===========>\n %s\n <==========", ret)
         return (ret, ai_model_interaction)
 
+    @staticmethod
+    def _create_input(messages: Iterable[AIModelInteractionMessage]) -> ResponseInputParam:
+        ret = []
+        for m in messages:
+            if m.role in ["user", "system", "assistant", "developer"] and m.content:
+                text_blob_contents = ""
+                for blob in m.blobs or []:
+                    _log.debug("name=%s, type=%s", blob.name, blob.content_type)
+                    is_text = (blob.content_type and blob.content_type.startswith("text/")) or (
+                        blob.content and b"\x00" not in blob.content
+                    )
+                    if is_text:
+                        text_blob_contents += "\n<file>\n"
+                        if blob.name:
+                            text_blob_contents += f"<name>{blob.name}</name>\n"
+                        text_blob_contents += "<content>\n"
+                        text_blob_contents += blob.content.decode("utf-8")
+                        text_blob_contents += "\n</content>\n"
+                        text_blob_contents += "</file>\n"
+                    else:
+                        _log.warning("Unsupported blob type: %s", blob.content_type)
+                if text_blob_contents:
+                    text_blob_contents += "\n"
+                text_blob_contents += m.content
+                ret.append(EasyInputMessageParam(role=m.role, content=text_blob_contents)) # pyright: ignore[reportArgumentType]
+            if m.tool_calls:
+                for c in m.tool_calls:
+                    if not c.id:
+                        raise RuntimeError("Tool calls must have an id")
+                    ret.append(
+                        ResponseFunctionToolCallParam(
+                            type="function_call", call_id=c.id, name=c.function_name, arguments=json.dumps(c.arguments)
+                        )
+                    )
+            if m.tool_call_id:
+                ret.append(
+                    FunctionCallOutput(
+                        type="function_call_output",
+                        call_id=m.tool_call_id,
+                        output=m.content or "",
+                    )
+                )
+        return ret
+
     @classmethod
-    def _create_message(cls, i_message: AIModelInteractionMessage) -> EasyInputMessageParam:
+    def _create_message(cls, m: AIModelInteractionMessage) -> ResponseInputParam:
         text_blob_contents = ""
-        for blob in i_message.blobs or []:
+        for blob in m.blobs or []:
             _log.debug("name=%s, type=%s", blob.name, blob.content_type)
             is_text = (blob.content_type and blob.content_type.startswith("text/")) or (
                 blob.content and b"\x00" not in blob.content
@@ -196,30 +239,35 @@ class ResponsesAIModel(BaseAIModel):
                 text_blob_contents += "</file>\n"
             else:
                 _log.warning("Unsupported blob type: %s", blob.content_type)
-        if i_message.content:
+        if m.content:
             if text_blob_contents:
                 text_blob_contents += "\n"
-            text_blob_contents += i_message.content
+            text_blob_contents += m.content
 
-        ret: dict[str, Any] = {
-            "role": i_message.role,
-            "content": text_blob_contents,
-        }
-        if i_message.tool_call_id:
-            ret["tool_call_id"] = i_message.tool_call_id
-        if i_message.tool_calls:
+        if m.tool_call_id:
+            ret: dict[str, Any] = {}
+            ret["type"] = "function_call_output"
+            ret["call_id"] = m.tool_call_id
+            ret["output"] = m.content
+        elif m.tool_calls:
+            ret = {}
             ret["tool_calls"] = [
                 {
-                    "id": tool_call.id,
+                    "call_id": tool_call.id,
                     "type": "function",
                     "function": {
                         "name": tool_call.function_name,
                         "arguments": json.dumps(tool_call.arguments),
                     },
                 }
-                for tool_call in i_message.tool_calls  # type: ignore
+                for tool_call in m.tool_calls  # type: ignore
             ]
-        _log.debug("Creating message: %s", i_message)
+        else:
+            ret: dict[str, Any] = {
+                "role": m.role,
+                "content": text_blob_contents,
+            }
+        _log.debug("Creating message: %s", m)
         return ret  # type: ignore
 
     @classmethod
@@ -229,20 +277,19 @@ class ResponsesAIModel(BaseAIModel):
         reasoning_tokens = resp.usage.output_tokens_details.reasoning_tokens if resp.usage else None
         output_tokens = resp.usage.output_tokens if resp.usage else None
 
-        if resp.tools:
-            tool_calls = [
-                AIModelToolCall(
-                    id=tool_call.id,
-                    function_name=tool_call.function.name,  # type: ignore
-                    arguments=json.loads(tool_call.function.arguments),  # type: ignore
+        tool_calls = []
+        for item in resp.output:
+            if item.type == "function_call":
+                call = AIModelToolCall(
+                    id=item.call_id,
+                    function_name=item.name,
+                    arguments=json.loads(item.arguments),
+                    thought_signature=None,
                 )
-                for tool_call in resp.tools
-            ]
-        else:
-            tool_calls = None
+                tool_calls.append(call)
         return AIChatResponse(
             content=resp.output_text,
-            tool_calls=tool_calls,
+            tool_calls=tool_calls or None,
             input_tokens=input_tokens,
             input_tokens_cached=input_tokens_cached,
             reasoning_tokens=reasoning_tokens,
@@ -295,6 +342,60 @@ class ResponsesAIModel(BaseAIModel):
         else:
             raise ValueError(f"Unsupported response format: {response_format}")
         return {"format": ret} if ret else None
+
+    @classmethod
+    def prepare_function_definition(
+        cls,
+        func: Callable[..., Any],
+        name: Optional[str] = None,
+        description: Optional[str] = None,
+    ) -> FunctionToolParam:
+        ai_function = cls.create_ai_function(func)
+        if name:
+            ai_function.name = name
+        if description:
+            ai_function.description = description
+        return cls.model_function_definition(ai_function)
+
+    @classmethod
+    def model_function_definition(cls, ai_function: AIFunction) -> FunctionToolParam:
+        """Creates an OpenAI FunctionDefinition from a Python callable.
+
+        It can be overriden if other models expect different definition
+        Args:
+            ai_function: AIFunction object
+        Returns:
+            A FunctionDefinition object representing the callable.  Returns None if input is invalid.
+        Raises:
+            TypeError: If input is not a callable.
+            ValueError: If the function signature is invalid or missing required information.
+        """
+        parameters: Dict[str, Any] = {
+            "type": "object",
+            "properties": {},
+            "required": [],
+        }
+        for param in ai_function.parameters:
+            param_name = param.name
+            param_description = param.description
+            parameters["properties"][param_name] = {
+                "type": (
+                    # Work around for not required parameters - union with null
+                    "string" if param.required else ["string", "null"]
+                ),
+                "description": param_description,
+            }  # Default type is string, could be improved.
+            parameters["required"].append(param_name)
+
+        parameters["additionalProperties"] = False  # Ensure no extra properties are allowed
+
+        return FunctionToolParam(
+            type="function",
+            name=ai_function.name,
+            description=ai_function.description or "",
+            parameters=parameters,
+            strict=True,
+        )
 
 
 def prepare_schema(model: Type[BaseModel]) -> dict:
