@@ -1,6 +1,7 @@
 import json
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, override
+from warnings import deprecated
 
 from openai import AsyncOpenAI, OpenAI
 from openai.types.chat import (
@@ -22,7 +23,7 @@ from .model import OpenAIParameters
 
 _log = logging.getLogger(__name__)
 
-
+@deprecated("Use ResponsesAIModel class.")
 class OpenAIModel(BaseAIModel):
     """OpenAI implementation of BaseAIModel"""
 

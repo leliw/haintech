@@ -1,20 +1,17 @@
-from typing import Iterable, Optional
+from typing import Iterable
 
 import pytest
 
-from haintech.ai.anthropic.anthropic_ai_model import AnthropicAIModel
-from haintech.ai.base.base_ai_chat import BaseAIChat
-from haintech.ai.base.base_ai_chat_async import BaseAIChatAsync
-from haintech.ai.base.base_ai_model import BaseAIModel
-from haintech.ai.deep_seek.deep_seek_ai_model import DeepSeekAIModel
-from haintech.ai.google_genai.google_ai_model import GoogleAIModel
-from haintech.ai.model import AIChatResponse, AIModelInteractionMessage
-from haintech.ai.open_ai.open_ai_model import OpenAIModel
-from haintech.testing.mocker_ai_model import GetChatResponse, MockerAIModel, mocker_ai_model  # noqa: F401
+from haintech.ai import AIChatResponse, AIModelInteractionMessage, BaseAIChat, BaseAIChatAsync, BaseAIModel
+from haintech.ai.anthropic import AnthropicAIModel
+from haintech.ai.deep_seek import DeepSeekAIModel
+from haintech.ai.google_genai import GoogleAIModel
+from haintech.ai.open_ai import ResponsesAIModel
+from haintech.testing.mocker_ai_model import MockerAIModel, mocker_ai_model  # noqa: F401
 
 
 @pytest.fixture(
-    params=[OpenAIModel, GoogleAIModel, DeepSeekAIModel, AnthropicAIModel],
+    params=[ResponsesAIModel, GoogleAIModel, DeepSeekAIModel, AnthropicAIModel],
     # params=[GoogleAIModel],
     scope="function",
 )
@@ -53,7 +50,7 @@ async def test_get_chat_response_async(ai_model: BaseAIModel, mocker_ai_model: M
 
 def test_recording(mocker_ai_model: MockerAIModel):  # noqa: F811
     # Given: A real AI model
-    ai_model = OpenAIModel(parameters={"temperature": 0})
+    ai_model = ResponsesAIModel(parameters={"temperature": 0})
     with pytest.raises(AssertionError):
         # When: AI model calls are recorded
         with mocker_ai_model.record():
@@ -71,7 +68,7 @@ def test_recording(mocker_ai_model: MockerAIModel):  # noqa: F811
 def test_mock_with_system_prompt(mocker_ai_model: MockerAIModel):  # noqa: F811
     system_prompt = "Always answer `Yes sir!`"
     mocker_ai_model.add(system_prompt=system_prompt, response="Yes sir!")
-    ai_model = OpenAIModel(parameters={"temperature": 0})
+    ai_model = ResponsesAIModel(parameters={"temperature": 0})
     ai_chat = BaseAIChat(ai_model, system_prompt=system_prompt)
     response = ai_chat.get_text_response("Who was the first US president?")
     assert response == "Yes sir!"
@@ -81,7 +78,7 @@ def test_mock_with_system_prompt(mocker_ai_model: MockerAIModel):  # noqa: F811
 async def test_mock_with_system_prompt_async(mocker_ai_model: MockerAIModel):  # noqa: F811
     system_prompt = "Always answer `Yes sir!`"
     mocker_ai_model.add(system_prompt=system_prompt, response="Yes sir!")
-    ai_model = OpenAIModel(parameters={"temperature": 0})
+    ai_model = ResponsesAIModel(parameters={"temperature": 0})
     ai_chat = BaseAIChatAsync(ai_model, system_prompt=system_prompt)
     response = await ai_chat.get_text_response("Who was the first US president?")
     assert response == "Yes sir!"
@@ -111,7 +108,7 @@ def test_mock_with_history_ok(ai_model: BaseAIModel, mocker_ai_model: MockerAIMo
         message="Who was the first US president?", response="The first US president was **George Washington**."
     )
 
-    def check_history(history: Optional[Iterable[AIModelInteractionMessage]] = None, **kwargs) -> AIChatResponse:
+    def check_history(history: Iterable[AIModelInteractionMessage] | None = None, **kwargs) -> AIChatResponse:
         for m in history or []:
             if m.role == "user" and m.content == "Who was the first US president?":
                 return AIChatResponse(content="John Adams")
@@ -135,7 +132,7 @@ def test_mock_with_history_err(ai_model: BaseAIModel, mocker_ai_model: MockerAIM
         message="Who was the first US president?", response="The first US president was **George Washington**."
     )
 
-    def check_history(history: Optional[Iterable[AIModelInteractionMessage]] = None, **kwargs) -> AIChatResponse:
+    def check_history(history: Iterable[AIModelInteractionMessage] | None = None, **kwargs) -> AIChatResponse:
         for m in history or []:
             if m.role == "user" and m.content == "Who was the first Polish president?":
                 return AIChatResponse(content="John Adams")

@@ -21,7 +21,7 @@ except ImportError:
     GOOGLE_AVAILABLE = False
 
 try:
-    from haintech.ai.open_ai import OpenAIModel  # noqa: F401
+    from haintech.ai.open_ai import OpenAIModel, ResponsesAIModel  # noqa: F401
 
     OPENAI_AVAILABLE = True
 except ImportError:
@@ -133,6 +133,8 @@ class MockerAIModel:
     if OPENAI_AVAILABLE:
         _mocked_methods.append("haintech.ai.open_ai.OpenAIModel.get_chat_response")
         _mocked_methods.append("haintech.ai.open_ai.OpenAIModel.get_chat_response_async")
+        _mocked_methods.append("haintech.ai.open_ai.ResponsesAIModel.get_chat_response")
+        _mocked_methods.append("haintech.ai.open_ai.ResponsesAIModel.get_chat_response_async")
     if ANTHROPIC_AVAILABLE:
         _mocked_methods.append("haintech.ai.anthropic.AnthropicAIModel.get_chat_response")
         _mocked_methods.append("haintech.ai.anthropic.AnthropicAIModel.get_chat_response_async")

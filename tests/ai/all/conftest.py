@@ -13,15 +13,15 @@ from haintech.ai import (
 )
 from haintech.ai.anthropic import AnthropicAIModel
 from haintech.ai.deep_seek.deep_seek_ai_model import DeepSeekAIModel
-from haintech.ai.google_generativeai import GoogleAITextEmbeddingModel
 from haintech.ai.google_genai import GoogleAIModel
+from haintech.ai.google_generativeai import GoogleAITextEmbeddingModel
 from haintech.ai.hugging_face import HuggingFaceTextEmbeddingModel
-from haintech.ai.open_ai import OpenAIModel, OpenAITextEmbeddingModel
+from haintech.ai.open_ai import OpenAITextEmbeddingModel, ResponsesAIModel
 
 
 @pytest.fixture(
-    params=[OpenAIModel, GoogleAIModel, DeepSeekAIModel, AnthropicAIModel],
-    # params=[GenAIModel],
+    params=[ResponsesAIModel, GoogleAIModel, DeepSeekAIModel, AnthropicAIModel],
+    # params=[ResponsesAIModel],
     scope="function",
 )
 def ai_model(request: pytest.FixtureRequest) -> BaseAIModel:

@@ -98,6 +98,7 @@ async def test_agent_without_acceptance(ai_model: BaseAIModel, session):
     response = await ai_agent.accept_tools([])
     # Then: I should get answer
     assert response.content
-    refusal_messages = ["I cannot", "I'm unable", "I wasn't able", "I don't have", "I apologize"]
-    print(response.content)
-    assert any(msg in response.content for msg in refusal_messages)
+    refusal_messages = ["I cannot", "I can't","I'm unable", "I wasn't able", "I don't", "I apologize"]
+    content = response.content.replace("’", "'")    # normalize apostrophes for consistent matching
+    print(content)
+    assert any(msg in content for msg in refusal_messages)

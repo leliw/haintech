@@ -298,9 +298,9 @@ class BaseAIModel(ABC):
         if prompt.output_format:
             ret += f"Output format: {prompt.output_format}\n\n"
         if prompt.examples:
-            ret += f"Examples: {prompt.examples}\n"
+            ret += "Examples:\n\n"
             for e in prompt.examples:
-                ret += f"{e}\n"
+                ret += f"{e}\n\n"
             ret += "\n"
         if prompt.recap:
             ret += f"Recap: {prompt.recap}\n\n"

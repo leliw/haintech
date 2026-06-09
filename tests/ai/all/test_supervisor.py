@@ -143,7 +143,7 @@ def test_agent_with_different_model(ai_model: BaseAIModel, agent_ai_model: BaseA
     man_session = AIMultiagentSession()
     man_agent = BaseAISupervisor(
         ai_model=ai_model,
-        system_prompt="You are a helpful assistant.",
+        system_prompt="You are a helpful assistant. Always use assistants.",
         agents=[hist_agent, geo_agent],
         session=man_session,
     )

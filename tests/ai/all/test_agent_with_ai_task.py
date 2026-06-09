@@ -1,3 +1,5 @@
+import logging
+
 from haintech.ai import (
     AIFunctionParameter,
     AIPrompt,
@@ -8,6 +10,7 @@ from haintech.ai import (
 
 
 def test_agent_with_ai_task(ai_model: BaseAIModel, session):
+    logging.getLogger("haintech").setLevel(logging.DEBUG)
     # Given: AI Agent with AI Task
     ai_agent = BaseAIAgent(
         ai_model=ai_model,
@@ -27,16 +30,16 @@ def test_agent_with_ai_task(ai_model: BaseAIModel, session):
         system_instructions=AIPrompt(
             persona="You are an experienced developer",
             objective="Prepare the name for the feature",
-            instructions="Use snake_case.",
+            instructions="Convert to a valid snake_case identifier. Prefer domain entities over actions.",
             context="It will be used as a folder name containing code.",
             constraints="Use English and plural form. Return only the name.",
             examples=[
-                "Q: Zarządzanie użytkownikami\nA: users",
-                "Q: User Management\nA: users",
-                "Q: Zarządzanie projektami\nA: projects",
-                "Q: Project Management\nA: projects",
-                "Q: CRUD dla książek\nA: books",
-                "Q: Obsługa projektów\nA: projects",
+                "Input: Zarządzanie użytkownikami\nOutput: users",
+                "Input: User Management\nOutput: users",
+                "Input: Zarządzanie projektami\nOutput: projects",
+                "Input: Project Management\nOutput: projects",
+                "Input: CRUD dla książek\nOutput: books",
+                "Input: Obsługa projektów\nOutput: projects",
             ],
         ),
         prompt="{feature}",
