@@ -5,23 +5,13 @@ from ampf.base import BaseStorage
 from ampf.in_memory import InMemoryFactory
 from ampf.local import LocalFactory
 
-from haintech.ai import AIChatSession, AIModelInteraction
-from haintech.ai.open_ai import (
-    OpenAIChat,
-    OpenAIModel,
-    OpenAIParameters,
-)
-from haintech.ai.open_ai.open_ai_agent import OpenAIAgent
+from haintech.ai import AIChatSession, AIModelInteraction, BaseAIAgent, BaseAIChat
+from haintech.ai.open_ai import ResponsesAIModel, ResponsesAIParameters
 
 
 @pytest.fixture
-def ai_parameters() -> OpenAIParameters:
-    return OpenAIParameters(temperature=0)
-
-
-@pytest.fixture
-def ai_model(ai_parameters: OpenAIParameters) -> OpenAIModel:
-    return OpenAIModel("gpt-4o-mini", parameters=ai_parameters)
+def ai_model() -> ResponsesAIModel:
+    return ResponsesAIModel()
 
 
 @pytest.fixture
@@ -33,8 +23,8 @@ def storage() -> Iterator[BaseStorage[AIModelInteraction]]:
 
 
 @pytest.fixture
-def ai_chat(ai_model: OpenAIModel) -> OpenAIChat:
-    return OpenAIChat(ai_model)
+def ai_chat(ai_model: ResponsesAIModel) -> BaseAIChat:
+    return BaseAIChat(ai_model)
 
 
 @pytest.fixture
@@ -48,8 +38,8 @@ def session() -> Iterator[AIChatSession]:
 
 
 @pytest.fixture
-def ai_chat_with_session(ai_model: OpenAIModel, session: AIChatSession) -> OpenAIChat:
-    return OpenAIChat(ai_model, session=session)
+def ai_chat_with_session(ai_model: ResponsesAIModel, session: AIChatSession) -> BaseAIChat:
+    return BaseAIChat(ai_model, session=session)
 
 
 def get_remaining_vacation_days(year: int):
@@ -74,12 +64,12 @@ def get_remaining_home_office_days(year: int):
     return 4
 
 
-class HRAgent(OpenAIAgent):
-    def __init__(self, session: AIChatSession = None):
+class HRAgent(BaseAIAgent):
+    def __init__(self, session: AIChatSession | None = None):
         super().__init__(
             description="HR Assistant",
-            context="You are a helpful HR assistant.",
-            ai_model=OpenAIModel(parameters=OpenAIParameters(temperature=0)),
+            system_prompt="You are a helpful HR assistant.",
+            ai_model=ResponsesAIModel(parameters=ResponsesAIParameters(temperature=0)),
             functions=[
                 get_remaining_vacation_days,
                 get_remaining_home_office_days,

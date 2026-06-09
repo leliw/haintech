@@ -3,8 +3,7 @@ from typing import List
 from haintech.ai import AIChatSession, BaseRAGSearcher, RAGItem
 from haintech.ai.base.base_ai_agent import BaseAIAgent
 from haintech.ai.model import RAGQuery
-from haintech.ai.open_ai.open_ai_agent import OpenAIAgent
-from haintech.ai.open_ai.open_ai_model import OpenAIModel
+from haintech.ai.open_ai import ResponsesAIModel
 
 
 class FileRAGSearcher(BaseRAGSearcher):
@@ -30,7 +29,7 @@ def test_agent_one_question():
     # Given: An agent with session and searcher
     searcher = FileRAGSearcher()
     session = AIChatSession()
-    ai_model = OpenAIModel(parameters={"temperature": 0})
+    ai_model = ResponsesAIModel(parameters={"temperature": 0})
     ai_agent = BaseAIAgent(ai_model=ai_model, searcher=searcher, session=session)
     # And: A simple question
     q = "Who is a father of two?"
