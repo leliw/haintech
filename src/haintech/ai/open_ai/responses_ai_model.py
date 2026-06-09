@@ -201,7 +201,7 @@ class ResponsesAIModel(BaseAIModel):
                 if text_blob_contents:
                     text_blob_contents += "\n"
                 text_blob_contents += m.content
-                ret.append(EasyInputMessageParam(role=m.role, content=text_blob_contents)) # pyright: ignore[reportArgumentType]
+                ret.append(EasyInputMessageParam(role=m.role, content=text_blob_contents))  # pyright: ignore[reportArgumentType]
             if m.tool_calls:
                 for c in m.tool_calls:
                     if not c.id:
@@ -307,7 +307,7 @@ class ResponsesAIModel(BaseAIModel):
         elif response_format == "json":
             ret = {"type": "json_object"}
         elif isinstance(response_format, type) and issubclass(response_format, BaseModel):
-            schema = prepare_schema(response_format)
+            schema = self.prepare_schema(response_format)
             ret = {
                 "type": "json_schema",
                 "strict": True,
@@ -325,7 +325,7 @@ class ResponsesAIModel(BaseAIModel):
             elif inner_type is bool:
                 inner_ret = {"type": "array", "items": {"type": "boolean"}}
             elif issubclass(inner_type, BaseModel):
-                schema = prepare_schema(inner_type)
+                schema = self.prepare_schema(inner_type)
                 inner_ret = {"type": "array", "items": schema}
             else:
                 raise ValueError(f"Unsupported inner response format: {inner_type}")
@@ -374,6 +374,7 @@ class ResponsesAIModel(BaseAIModel):
             "type": "object",
             "properties": {},
             "required": [],
+            "additionalProperties": False,
         }
         for param in ai_function.parameters:
             param_name = param.name
@@ -387,8 +388,6 @@ class ResponsesAIModel(BaseAIModel):
             }  # Default type is string, could be improved.
             parameters["required"].append(param_name)
 
-        parameters["additionalProperties"] = False  # Ensure no extra properties are allowed
-
         return FunctionToolParam(
             type="function",
             name=ai_function.name,
@@ -397,12 +396,56 @@ class ResponsesAIModel(BaseAIModel):
             strict=True,
         )
 
+    try:
+        from agents.mcp import MCPServer
+        from mcp import Tool as MCPTool
 
-def prepare_schema(model: Type[BaseModel]) -> dict:
-    schema = model.model_json_schema()
-    for _, v in schema["properties"].items():
-        v.pop("title", None)
-    schema.pop("title", None)
-    schema.pop("description", None)
-    schema["additionalProperties"] = False
-    return schema
+        def prepare_mcp_tool_definition(self, tool: MCPTool) -> FunctionToolParam:
+            """Creates a FunctionDefinition from an MCP Tool.
+
+            It can be overriden if other models expect different definition
+
+            Args:
+                tool: The MCP Tool to create the FunctionDefinition from.
+            Returns:
+                A FunctionDefinition object representing the tool.
+            """
+            try:
+                properties = tool.inputSchema.get("properties", {})
+                required = tool.inputSchema.get("required", [])      
+                # if len(properties) != len(required):
+                #     required = list(properties.keys()) # Ensure all properties are marked as required for strict mode
+                # for _, v in properties.items():
+                #     if "items" in v:
+                #         items = v.get("items", {})
+                #         if "properties" in items:
+                #             items["additionalProperties"] = False   # Required by OpenAI
+                ret = FunctionToolParam(
+                    name=tool.name,
+                    description=tool.description,
+                    type="function",
+                    parameters={
+                        "type": "object",
+                        "properties": properties,
+                        "required": required,
+                        "additionalProperties": False,
+                    },
+                    strict=False,
+                )
+                return ret
+            except Exception as e:
+                print(f"Error preparing MCP tool definition: {e}")
+                raise e
+
+    except ImportError:
+        pass
+
+    @staticmethod
+    def prepare_schema(model: Type[BaseModel]) -> dict:
+        schema = model.model_json_schema()
+        for _, v in schema["properties"].items():
+            v.pop("title", None)
+        schema.pop("title", None)
+        schema.pop("description", None)
+        schema["additionalProperties"] = False
+        return schema
