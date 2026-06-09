@@ -9,13 +9,12 @@ from haintech.ai.google_genai import GoogleAIModel, GoogleAIParameters
 
 @pytest.fixture(
     params=[
-        "gemini-2.5-flash-lite",
-        "gemini-2.5-flash",
+        "gemini-3.1-flash-lite",
+        "gemini-3.5-flash",
         "gemini-2.5-pro",
         #
-        "gemini-3-flash-preview",
-        "gemini-3.1-flash-lite-preview",
         "nano-banana-pro-preview",
+        "gemini-3.1-pro-preview",
     ]
 )
 def ai_model(request: pytest.FixtureRequest) -> GoogleAIModel:
@@ -31,6 +30,7 @@ def test_list_models():
     print(list(ret))
     assert any("gemini" in n for n in ret)
     # assert False
+
 
 def test_get_chat_response(ai_model: GoogleAIModel):
     response = ai_model.get_chat_response(
@@ -56,6 +56,7 @@ def test_get_chat_response_with_blob(file_name: str):
     # Then: The response contains the dog's breed from an answer blob
     assert response.content and "labrador" in response.content.lower()
 
+
 def test_get_chat_response_with_text_blob():
     # Given: Google AI Model
     ai_model = GoogleAIModel("gemini-2.5-flash-lite", parameters=GoogleAIParameters(temperature=0))
@@ -70,6 +71,7 @@ def test_get_chat_response_with_text_blob():
     )
     # Then: The response contains the dog's breed from an answer blob
     assert response.content and "labrador" in response.content.lower()
+
 
 @pytest.mark.parametrize("file_name", ["answer.docx"])
 def test_get_chat_response_with_unsuported_blob(file_name: str):
@@ -141,12 +143,12 @@ def test_get_response_list_str(ai_model: GoogleAIModel):
     # Then: List of strings is returned with the response
     assert all("Harry Potter" in b for b in ret)
 
+
 def test_get_response_list_ints(ai_model: GoogleAIModel):
     # When: Get list response from ai model
     ret = ai_model.get_response_list("Return a list of Harry Potter book release years. (in json format)", int)
     # Then: List of strings is returned with the response
     assert any(1998 == b for b in ret)
-
 
 
 @pytest.mark.asyncio
@@ -181,9 +183,12 @@ async def test_get_response_list_str_async(ai_model: GoogleAIModel):
     # Then: List of strings is returned with the response
     assert all("Harry Potter" in b for b in ret)
 
+
 @pytest.mark.asyncio
 async def test_get_response_list_ints_async(ai_model: GoogleAIModel):
     # When: Get list response from ai model
-    ret = await ai_model.get_response_list_async("Return a list of Harry Potter book release years. (in json format)", int)
+    ret = await ai_model.get_response_list_async(
+        "Return a list of Harry Potter book release years. (in json format)", int
+    )
     # Then: List of strings is returned with the response
     assert any(1998 == b for b in ret)
