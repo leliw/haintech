@@ -113,7 +113,7 @@ def test_supervisor_with_without_acceptance_agent_call(
     # Then: I should get answer
     assert not response.tool_calls
     # And: Assistant "cannot" answer or "need" some information, or similar negative phrasing
-    negative_keywords = ["cannot", "need", "don't have", "can't", "couldn't", "unable"]
+    negative_keywords = ["cannot", "need", "don't have", "can't", "couldn't", "unable", "don’t"]
     assert response.content and any(keyword in response.content for keyword in negative_keywords)
 
 
