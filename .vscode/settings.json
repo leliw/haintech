@@ -1,6 +1,16 @@
 {
     "python.testing.pytestArgs": [
-        "tests"
+        "tests",
+        "--cov=haintech",
+        // "--log-file=tests.log",
+        "--log-format=%(asctime)s %(thread)d %(levelname)s %(name)s: %(message)s",
+        "--log-date-format=%H:%M:%S.%f",
+        // "--color=yes",
+        "-rfE",
+        "--no-cov-on-fail",
+        "--disable-warnings",
+        "--show-capture=log",
+        "--show-capture=stdout",
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
