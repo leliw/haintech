@@ -1,9 +1,9 @@
 # This is a simple MCP server for HR functions.
 # It is used for testing purposes.
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 
-mcp = FastMCP("hr-server")
+mcp = MCPServer("hr-server")
 
 
 @mcp.tool()

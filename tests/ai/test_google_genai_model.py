@@ -1,17 +1,17 @@
-from pydantic import BaseModel
 import pytest
 from ampf.local import LocalFactory
+from pydantic import BaseModel
 
 from haintech.ai.exceptions import UnsupportedMimeTypeError
-from haintech.ai.model import AIModelInteractionMessage
 from haintech.ai.google_genai import GoogleAIModel, GoogleAIParameters
+from haintech.ai.model import AIModelInteractionMessage
 
 
 @pytest.fixture(
     params=[
-        "gemini-3.1-flash-lite",
-        "gemini-3.5-flash",
-        "gemini-2.5-pro",
+        "gemini-3.5-flash-lite",
+        "gemini-3.6-flash",
+        # "gemini-2.5-pro",
         #
         "nano-banana-pro-preview",
         "gemini-3.1-pro-preview",
