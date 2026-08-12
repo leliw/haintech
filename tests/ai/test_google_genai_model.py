@@ -59,7 +59,7 @@ def test_get_chat_response_with_blob(file_name: str):
 
 def test_get_chat_response_with_text_blob():
     # Given: Google AI Model
-    ai_model = GoogleAIModel("gemini-2.5-flash-lite", parameters=GoogleAIParameters(temperature=0))
+    ai_model = GoogleAIModel()
     # And: A text blob with answer
     blob_storage = LocalFactory("./tests/data").create_blob_storage("")
     blob_storage.default_ext = None

@@ -52,7 +52,7 @@ class GoogleAIModel(BaseAIModel):
 
     def __init__(
         self,
-        model_name: str = "gemini-2.5-flash",
+        model_name: str = "gemini-3.5-flash-lite",
         parameters: GenerationConfig | dict[str, Any] | None = None,
         api_key: str | None = None,
     ):
