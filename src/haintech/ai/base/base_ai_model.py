@@ -26,7 +26,7 @@ from ..model import (
 class BaseAIModel(ABC):
     @classmethod
     @abstractmethod
-    def get_model_names(cls) -> list[str]:
+    def get_model_names(cls, task: str = "chat") -> list[str]:
         pass
 
     @abstractmethod

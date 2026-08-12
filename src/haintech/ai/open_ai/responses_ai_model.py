@@ -55,9 +55,54 @@ class ResponsesAIModel(BaseAIModel):
         self.parameters = parameters or ResponsesAIParameters()
 
     @classmethod
-    def get_model_names(cls) -> list[str]:
+    def get_model_names(cls, task: str = "chat") -> list[str]:
         cls.setup()
-        return [m.id for m in cls.openai.models.list().data]
+        raw_models = [m.id for m in cls.openai.models.list().data]
+        ret = []
+
+        for name in raw_models:
+            # Filter out snapshot dates and deprecated models
+            if (
+                cls._ends_with_date(name)
+                or name.endswith("-latest")
+                or name.startswith(("babbage", "gpt-4-", "davinci"))
+            ):
+                continue
+
+            # Task filtering
+            if task == "chat":
+                non_chat_keywords = (
+                    "tts",
+                    "image-",
+                    "embedding-",
+                    "sora-",
+                    "whisper-",
+                    "audio",
+                    "transcribe",
+                    "realtime",
+                    "search",
+                    "codex",
+                    "turbo",
+                    "dall-e",
+                )
+                if any(k in name for k in non_chat_keywords):
+                    continue
+                ret.append(name)
+            elif task == "image":
+                if "dall-e" in name:
+                    ret.append(name)
+            elif task == "embedding":
+                if "embedding" in name:
+                    ret.append(name)
+
+        return ret
+
+    @classmethod
+    def _ends_with_date(cls, s: str) -> bool:
+        import re
+
+        pattern = r"-\d{4}-\d{2}-\d{2}$"
+        return bool(re.search(pattern, s))
 
     @override
     def get_chat_response(
@@ -140,8 +185,7 @@ class ResponsesAIModel(BaseAIModel):
         )
 
         if functions:
-            tools = []
-            tools.append(functions.values())
+            tools = list(functions.values())
         else:
             tools = None
 
@@ -301,9 +345,9 @@ class ResponsesAIModel(BaseAIModel):
         response_format: Literal["text", "json"]
         | type[Sequence[BaseModel | str | int | float | bool]]
         | type[BaseModel] = "text",
-    ) -> dict | None:
+    ) -> dict:
         if response_format == "text":
-            ret = None
+            ret = {"type": "text"}
         elif response_format == "json":
             ret = {"type": "json_object"}
         elif isinstance(response_format, type) and issubclass(response_format, BaseModel):
@@ -341,7 +385,7 @@ class ResponsesAIModel(BaseAIModel):
             }
         else:
             raise ValueError(f"Unsupported response format: {response_format}")
-        return {"format": ret} if ret else None
+        return {"format": ret}
 
     @classmethod
     def prepare_function_definition(

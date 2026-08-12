@@ -73,15 +73,40 @@ class GoogleAIModel(BaseAIModel):
             cls._configured = True
             _log.debug("Google AI Model configured")
 
+    @override
     @classmethod
-    def get_model_names(cls) -> list[str]:
+    def get_model_names(cls, task: str = "chat") -> list[str]:
         if not cls._configured:
             cls.setup()
         ret = []
         for m in cls.client.models.list():
-            if m.supported_actions and "generateContent" in m.supported_actions and m.name:
-                ret.append(m.name.removeprefix("models/"))
+            if not m.supported_actions or "generateContent" not in m.supported_actions or not m.name:
+                continue
+
+            name = m.name.removeprefix("models/")
+
+            # Filter out snapshots, experimental, and obsolete models
+            if (
+                "exp" in name
+                or name.endswith(("-001", "-latest"))
+                or name.startswith(("gemini-robotics", "gemini-2.0-flash-lite-preview"))
+                or cls._ends_with_month_year(name)
+            ):
+                continue
+
+            # Filter by task capability
+            if task == "chat":
+                if any(k in name for k in ("tts", "gemma", "image")):
+                    continue
+                ret.append(name)
+            elif task == "image" and "image" in name or task == "embedding" and "embedding" in name:
+                ret.append(name)
         return ret
+
+    @classmethod
+    def _ends_with_month_year(cls, s: str) -> bool:
+        pattern = r"-\d{2}-\d{4}$"
+        return bool(re.search(pattern, s))
 
     @override
     def _prepare_response_format(
@@ -303,7 +328,7 @@ class GoogleAIModel(BaseAIModel):
                 text_blob_contents += "\n</file>\n"
             else:
                 parts.append(Part(inline_data=Blob(data=blob.content, mime_type=blob.content_type)))
-        parts.append(cls._create_parts_from_tool_calls(i_message))
+        parts.extend(cls._create_parts_from_tool_calls(i_message))
         if i_message.content:
             if text_blob_contents:
                 text_blob_contents += "\n"
@@ -440,7 +465,7 @@ class GoogleAIModel(BaseAIModel):
             """
             parameters = Schema(type=genai.types.Type.OBJECT, properties={}, required=[])
             assert parameters.properties is not None
-            for param_name, param in tool.input_schema["properties"].items():
+            for param_name, param in tool.input_schema.get("properties", {}).items():
                 match param["type"]:
                     case "integer":
                         param_type = genai.types.Type.INTEGER
