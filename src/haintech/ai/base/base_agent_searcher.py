@@ -1,7 +1,6 @@
 import logging
-from typing import Callable, List, Optional
+from collections.abc import Callable
 
-from haintech.ai.ai_task_executor import AITaskExecutor
 from haintech.ai.base.base_ai_model import BaseAIModel
 from haintech.ai.base.base_rag_searcher import BaseRAGSearcher
 from haintech.ai.model import AIContext, AIModelInteraction, AIModelInteractionMessage, AIPrompt, RAGQuery
@@ -17,8 +16,10 @@ class BaseAgentSearcher(BaseRAGSearcher):
         ai_model: BaseAIModel,
         system_instructions: str = "Task: Based on the system description, conversation, and user question, generate one short search query for document retrieval.",
         prompt: str = "Input:\nSystem: {system_prompt}\nHistory: {conversation_history}\nQuestion: {user_question}\n\nOutput:\nOnly one query between 20 and 100 tokens, no comments or markdown.",
-        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        interaction_logger: Callable[[AIModelInteraction], None] | None = None,
     ):
+        from haintech.ai.ai_task_executor import AITaskExecutor
+
         self.ai_task_executor = AITaskExecutor(
             ai_model=ai_model,
             system_instructions=system_instructions,
@@ -30,7 +31,7 @@ class BaseAgentSearcher(BaseRAGSearcher):
     def agent_search_sync(
         self,
         system_prompt: str | AIPrompt | None,
-        history: List[AIModelInteractionMessage],
+        history: list[AIModelInteractionMessage],
         message: AIModelInteractionMessage,
     ) -> AIContext | None:
         if not system_prompt and not history:
@@ -49,7 +50,7 @@ class BaseAgentSearcher(BaseRAGSearcher):
     async def agent_search_async(
         self,
         system_prompt: str | AIPrompt | None,
-        history: List[AIModelInteractionMessage],
+        history: list[AIModelInteractionMessage],
         message: AIModelInteractionMessage,
     ) -> AIContext | None:
         if not system_prompt and not history:
