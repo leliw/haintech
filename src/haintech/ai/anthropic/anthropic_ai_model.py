@@ -1,7 +1,9 @@
 import logging
-from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, override
+from collections.abc import Callable, Iterable
+from typing import Any, Literal, override
 
 import anthropic
+from anthropic.types import ModelInfo
 from pydantic import BaseModel
 
 from haintech.ai import (
@@ -13,40 +15,55 @@ from haintech.ai import (
 )
 from haintech.ai.model import AIContext, AIFunction, AIModelInteractionTool, AIModelToolCall
 
+_log = logging.getLogger(__name__)
+
 
 class AnthropicAIModel(BaseAIModel):
-    _log = logging.getLogger(__name__)
+    _client: anthropic.Anthropic | None = None
+    _async_client: anthropic.AsyncAnthropic | None = None
+
+    _models: list[ModelInfo] | None = None
+
+    @classmethod
+    def get_client(cls) -> anthropic.Anthropic:
+        if not cls._client:
+            cls._client = anthropic.Anthropic()
+        return cls._client
+
+    @classmethod
+    def get_async_client(cls) -> anthropic.AsyncAnthropic:
+        if not cls._async_client:
+            cls._async_client = anthropic.AsyncAnthropic()
+        return cls._async_client
 
     def __init__(
         self,
-        model_name: str = "claude-sonnet-4-20250514",
-        parameters: Optional[Dict[str, str | int | float]] = None,
+        model_name: str = "claude-haiku-4-5-20251001",
+        parameters: dict[str, str | int | float] | None = None,
     ):
-        try:
-            import anthropic
+        self.NOT_GIVEN = anthropic.NOT_GIVEN
 
-            self.NOT_GIVEN = anthropic.NOT_GIVEN
+        self.model_name = model_name
+        self.parameters = parameters or {}
+        if "max_tokens" not in self.parameters:
+            self.parameters["max_tokens"] = 1000
 
-            self.client = anthropic.Anthropic()
-            self.async_client = anthropic.AsyncAnthropic()
-            self.model_name = model_name
-            self.parameters = parameters or {}
-            if "max_tokens" not in self.parameters:
-                self.parameters["max_tokens"] = 1000
-        except ImportError as e:
-            raise ImportError(
-                "The 'anthropic' library is not installed. Please install it to use AntrhopicAIModel (e.g., `pip install haintech[anthropic]`)."
-            ) from e
+    @classmethod
+    @override
+    def get_model_names(cls, task: str = "chat") -> list[str]:
+        if not cls._models:
+            cls._models = list(cls.get_client().models.list())
+        return [m.id for m in cls._models]
 
     @override
     def get_chat_response(
         self,
-        system_prompt: Optional[str | AIPrompt] = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[Dict[Callable, Any]] = None,
-        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        system_prompt: str | AIPrompt | None = None,
+        history: Iterable[AIModelInteractionMessage] | None = None,
+        context: AIContext | None = None,
+        message: AIModelInteractionMessage | None = None,
+        functions: dict[Callable, Any] | None = None,
+        interaction_logger: Callable[[AIModelInteraction], None] | None = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         if not isinstance(history, list):
@@ -55,10 +72,10 @@ class AnthropicAIModel(BaseAIModel):
             system_prompt, history, context, message, functions, response_format
         )
         try:
-            resp: anthropic.types.Message = self.client.messages.create(**parameters)
+            resp: anthropic.types.Message = self.get_client().messages.create(**parameters)  # type: ignore
             response = self._create_ai_chat_response(resp.content)  # type: ignore
-        except Exception as e:
-            self._log.error("Error: %s", e)
+        except Exception as e:  # noqa: BLE001
+            _log.error("Error: %s", e)
             response = AIChatResponse(content=str(e))
         if interaction_logger:
             ai_model_interaction.response = response
@@ -68,12 +85,12 @@ class AnthropicAIModel(BaseAIModel):
     @override
     async def get_chat_response_async(
         self,
-        system_prompt: Optional[str | AIPrompt] = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[Dict[Callable, Any]] = None,
-        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        system_prompt: str | AIPrompt | None = None,
+        history: Iterable[AIModelInteractionMessage] | None = None,
+        context: AIContext | None = None,
+        message: AIModelInteractionMessage | None = None,
+        functions: dict[Callable, Any] | None = None,
+        interaction_logger: Callable[[AIModelInteraction], None] | None = None,
         response_format: Literal["text", "json"] = "text",
     ) -> AIChatResponse:
         if not isinstance(history, list):
@@ -82,10 +99,10 @@ class AnthropicAIModel(BaseAIModel):
             system_prompt, history, context, message, functions, response_format
         )
         try:
-            resp: anthropic.types.Message = await self.async_client.messages.create(**parameters)
+            resp: anthropic.types.Message = await self.get_async_client().messages.create(**parameters)  # type: ignore
             response = self._create_ai_chat_response(resp.content)  # type: ignore
-        except Exception as e:
-            self._log.error("Error: %s", e)
+        except Exception as e:  # noqa: BLE001
+            _log.error("Error: %s", e)
             response = AIChatResponse(content=str(e))
         if interaction_logger:
             ai_model_interaction.response = response
@@ -95,13 +112,13 @@ class AnthropicAIModel(BaseAIModel):
     def _prepare_parameters(
         self,
         system_prompt: str | AIPrompt | None,
-        history: List[AIModelInteractionMessage],
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[Dict[Callable, Any]] = None,
+        history: list[AIModelInteractionMessage],
+        context: AIContext | None = None,
+        message: AIModelInteractionMessage | None = None,
+        functions: dict[Callable, Any] | None = None,
         response_format: Literal["text", "json"] = "text",
     ):
-        self._log.debug("Preparing parameters for Anthropic model")
+        _log.debug("Preparing parameters for Anthropic model")
         if not message:
             if history:
                 message = history[-1]
@@ -112,7 +129,8 @@ class AnthropicAIModel(BaseAIModel):
             msg_list = [self._create_message(m) for m in history]
         if isinstance(message, str):
             message = AIModelInteractionMessage(role="user", content=message)
-        msg_list.append(self._create_message(message, context))
+        if message:
+            msg_list.append(self._create_message(message, context))
         tools = []
         if functions:
             for f in functions:
@@ -133,24 +151,25 @@ class AnthropicAIModel(BaseAIModel):
             response_format=response_format_param,
         )
         system = self._prompt_to_str(system_prompt) if isinstance(system_prompt, AIPrompt) else system_prompt
+        params = {
+            "model": self.model_name,
+            "system": system or anthropic.NOT_GIVEN,
+            "messages": msg_list,
+        }
+        if tools:
+            params["tools"] = tools
         return (
-            {
-                "model": self.model_name,
-                "system": system or anthropic.NOT_GIVEN,
-                "messages": msg_list,
-                "tools": tools,
-            }
-            | (self.parameters or {}),  # Unpack parameters if not None
+            params | (self.parameters or {}),  # Unpack parameters if not None
             ai_model_interaction,
         )
 
     @classmethod
     def _create_message(
-        cls, interaction_message: AIModelInteractionMessage, context: Optional[AIContext] = None
-    ) -> Dict[str, Any]:
-        cls._log.debug("Creating message: %s", interaction_message)
+        cls, interaction_message: AIModelInteractionMessage, context: AIContext | None = None
+    ) -> dict[str, Any]:
+        _log.debug("Creating message: %s", interaction_message)
         if context:
-            cls._log.debug("With context: %s", context)
+            _log.debug("With context: %s", context)
 
         if interaction_message.tool_call_id:
             ret = {
@@ -194,26 +213,25 @@ class AnthropicAIModel(BaseAIModel):
         return ret
 
     @classmethod
-    def _create_ai_chat_response(cls, lm_resp: List[BaseModel]) -> AIChatResponse:
-        content = None
+    def _create_ai_chat_response(cls, lm_resp: list[BaseModel]) -> AIChatResponse:
+        content_parts = []
         tool_calls = []
         for m_resp in lm_resp:
             m_resp = m_resp.model_dump()
             if "text" in m_resp:
-                content = m_resp["text"]
+                content_parts.append(m_resp["text"])
             elif "id" in m_resp and "name" in m_resp and "input" in m_resp:
                 tool_calls.append(
                     AIModelToolCall(
-                        id=m_resp["id"],
-                        function_name=m_resp["name"],
-                        arguments=m_resp["input"],
+                        id=m_resp["id"], function_name=m_resp["name"], arguments=m_resp["input"], thought_signature=None
                     )
                 )
+        content = "".join(content_parts) if content_parts else None
         return AIChatResponse(content=content, tool_calls=tool_calls)
 
     @classmethod
-    def model_function_definition(cls, ai_function: AIFunction) -> Dict[str, Any]:
-        parameters: Dict[str, Any] = {
+    def model_function_definition(cls, ai_function: AIFunction) -> dict[str, Any]:
+        parameters: dict[str, Any] = {
             "type": "object",
             "properties": {},
             "required": [],
@@ -240,7 +258,7 @@ class AnthropicAIModel(BaseAIModel):
         from agents.mcp import MCPServer
         from mcp import Tool as MCPTool
 
-        def prepare_mcp_tool_definition(self, tool: MCPTool) -> Dict[str, Any]:
+        def prepare_mcp_tool_definition(self, tool: MCPTool) -> dict[str, Any]:
             """Creates a FunctionDefinition from an MCP Tool.
 
             It can be overriden if other models expect different definition
@@ -250,17 +268,17 @@ class AnthropicAIModel(BaseAIModel):
             Returns:
                 A FunctionDefinition object representing the tool.
             """
-            if tool.inputSchema is None:
-                raise ValueError(f"Tool {tool.name} has no inputSchema")
+            if tool.input_schema is None:
+                raise ValueError(f"Tool {tool.name} has no input_schema")
             ret = {
                 "name": tool.name,
                 "description": tool.description,
             }
-            if tool.inputSchema["properties"]:
+            if tool.input_schema.get("properties"):
                 ret["input_schema"] = {
                     "type": "object",
-                    "properties": tool.inputSchema["properties"],
-                    "required": tool.inputSchema["required"],
+                    "properties": tool.input_schema["properties"],
+                    "required": tool.input_schema["required"],
                 }
             return ret
     except ImportError:

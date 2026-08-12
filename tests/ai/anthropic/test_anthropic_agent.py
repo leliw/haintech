@@ -1,5 +1,3 @@
-from typing import Dict
-
 from haintech.ai import BaseAIAgent, BaseAISupervisor
 from haintech.ai.anthropic import AnthropicAIModel
 
@@ -12,7 +10,7 @@ def test_agent_definition():
     ai_supervisor = BaseAISupervisor(ai_model=ai_model)
     # When: I get agent definition
     definition = ai_supervisor.get_agent_definition(ai_agent)
-    if not isinstance(definition, Dict):
+    if not isinstance(definition, dict):
         definition = type(definition).to_dict(definition)
     # Then: I should get definition
     assert definition["name"] == "Agent__007"
