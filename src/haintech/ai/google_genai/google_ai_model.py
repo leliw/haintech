@@ -1,7 +1,8 @@
 import base64
 import logging
 import re
-from typing import Any, Callable, Dict, Iterable, List, Literal, Optional, Sequence, Type, override
+from collections.abc import Callable, Iterable, Sequence
+from typing import Any, Literal, override
 
 from google import genai
 from google.genai.types import (
@@ -52,8 +53,8 @@ class GoogleAIModel(BaseAIModel):
     def __init__(
         self,
         model_name: str = "gemini-2.5-flash",
-        parameters: Optional[GenerationConfig | Dict[str, Any]] = None,
-        api_key: Optional[str] = None,
+        parameters: GenerationConfig | dict[str, Any] | None = None,
+        api_key: str | None = None,
     ):
         if api_key:
             self.setup(api_key=api_key)
@@ -66,30 +67,28 @@ class GoogleAIModel(BaseAIModel):
             self.parameters = GenerationConfig.model_validate(parameters)
 
     @classmethod
-    def setup(cls, api_key: Optional[str] = None):
+    def setup(cls, api_key: str | None = None):
         if not cls._configured:
             cls.client = genai.Client(api_key=api_key)
             cls._configured = True
             _log.debug("Google AI Model configured")
 
     @classmethod
-    def get_model_names(cls) -> List[str]:
+    def get_model_names(cls) -> list[str]:
         if not cls._configured:
             cls.setup()
         ret = []
         for m in cls.client.models.list():
-            if m.supported_actions and "generateContent" in m.supported_actions:
-                if m.name:
-                    model_id = m.name[7:] if m.name.startswith("models/") else m.name
-                    ret.append(model_id)
+            if m.supported_actions and "generateContent" in m.supported_actions and m.name:
+                ret.append(m.name.removeprefix("models/"))
         return ret
 
     @override
     def _prepare_response_format(
         self,
         response_format: Literal["text", "json"]
-        | Type[Sequence[BaseModel | str | int | float | bool]]
-        | Type[BaseModel] = "text",
+        | type[Sequence[BaseModel | str | int | float | bool]]
+        | type[BaseModel] = "text",
     ) -> dict:
         if response_format == "text":
             ret = {"type": "text"}
@@ -123,12 +122,12 @@ class GoogleAIModel(BaseAIModel):
     @override
     def get_chat_response(
         self,
-        system_prompt: str | None = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[Dict[Callable, Any]] = None,
-        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        system_prompt: str | AIPrompt | None = None,
+        history: Iterable[AIModelInteractionMessage] | None = None,
+        context: AIContext | None = None,
+        message: AIModelInteractionMessage | None = None,
+        functions: dict[Callable, Any] | None = None,
+        interaction_logger: Callable[[AIModelInteraction], None] | None = None,
         response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         history = list(history or [])
@@ -149,12 +148,12 @@ class GoogleAIModel(BaseAIModel):
     @override
     async def get_chat_response_async(
         self,
-        system_prompt: Optional[str | AIPrompt] = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[Dict[Callable, Any]] = None,
-        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        system_prompt: str | AIPrompt | None = None,
+        history: Iterable[AIModelInteractionMessage] | None = None,
+        context: AIContext | None = None,
+        message: AIModelInteractionMessage | None = None,
+        functions: dict[Callable, Any] | None = None,
+        interaction_logger: Callable[[AIModelInteraction], None] | None = None,
         response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         history = list(history or [])
@@ -175,12 +174,12 @@ class GoogleAIModel(BaseAIModel):
     def _prepare_parameters(
         self,
         system_prompt: str | AIPrompt | None,
-        history: List[AIModelInteractionMessage],
+        history: list[AIModelInteractionMessage],
         context: AIContext | None,
         message: AIModelInteractionMessage | None,
-        functions: Dict[Callable, Any] | None,
+        functions: dict[Callable, Any] | None,
         response_format: Literal["text", "json"] | dict = "text",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         if not self._configured:
             self.setup()
 
@@ -234,7 +233,7 @@ class GoogleAIModel(BaseAIModel):
             if "Unsupported MIME type" in str(e):
                 raise UnsupportedMimeTypeError()
             else:
-                raise e
+                raise
 
     async def _get_chat_response_async(
         self,
@@ -250,7 +249,7 @@ class GoogleAIModel(BaseAIModel):
             if "Unsupported MIME type" in str(e):
                 raise UnsupportedMimeTypeError()
             else:
-                raise e
+                raise
 
     @classmethod
     def _prompt_to_str(cls, prompt: str | AIPrompt) -> str:
@@ -304,8 +303,7 @@ class GoogleAIModel(BaseAIModel):
                 text_blob_contents += "\n</file>\n"
             else:
                 parts.append(Part(inline_data=Blob(data=blob.content, mime_type=blob.content_type)))
-        for f in cls._create_parts_from_tool_calls(i_message):
-            parts.append(f)
+        parts.append(cls._create_parts_from_tool_calls(i_message))
         if i_message.content:
             if text_blob_contents:
                 text_blob_contents += "\n"
@@ -442,7 +440,7 @@ class GoogleAIModel(BaseAIModel):
             """
             parameters = Schema(type=genai.types.Type.OBJECT, properties={}, required=[])
             assert parameters.properties is not None
-            for param_name, param in tool.inputSchema["properties"].items():
+            for param_name, param in tool.input_schema["properties"].items():
                 match param["type"]:
                     case "integer":
                         param_type = genai.types.Type.INTEGER
@@ -451,7 +449,7 @@ class GoogleAIModel(BaseAIModel):
                     case _:
                         param_type = genai.types.Type.STRING
                 parameters.properties[param_name] = Schema(type=param_type)
-            parameters.required = tool.inputSchema["required"] if "required" in tool.inputSchema else []
+            parameters.required = tool.input_schema.get("required", [])
             return FunctionDeclaration(
                 name=tool.name,
                 description=tool.description,

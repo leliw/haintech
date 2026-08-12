@@ -1,7 +1,8 @@
 import json
 import logging
+from collections.abc import Callable, Iterable, Sequence
 from itertools import chain
-from typing import Any, Callable, Dict, Iterable, Literal, Optional, Sequence, Type, override
+from typing import Any, Literal, override
 
 from openai import AsyncOpenAI, OpenAI
 from openai.types.responses import (
@@ -47,7 +48,7 @@ class ResponsesAIModel(BaseAIModel):
     def __init__(
         self,
         model_name: str = "gpt-5.4-nano",
-        parameters: ResponsesAIParameters | Dict[str, Any] | None = None,
+        parameters: ResponsesAIParameters | dict[str, Any] | None = None,
     ):
         self.setup()
         self.model_name = model_name
@@ -61,12 +62,12 @@ class ResponsesAIModel(BaseAIModel):
     @override
     def get_chat_response(
         self,
-        system_prompt: Optional[str | AIPrompt] = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[Dict[Callable, Any]] = None,
-        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        system_prompt: str | AIPrompt | None = None,
+        history: Iterable[AIModelInteractionMessage] | None = None,
+        context: AIContext | None = None,
+        message: AIModelInteractionMessage | None = None,
+        functions: dict[Callable, Any] | None = None,
+        interaction_logger: Callable[[AIModelInteraction], None] | None = None,
         response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         if not isinstance(history, list):
@@ -78,7 +79,7 @@ class ResponsesAIModel(BaseAIModel):
             resp: Response = self.openai.responses.create(**parameters)
             response = self._create_ai_chat_response(resp)
             return response
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             _log.error("Error: %s", e)
             response = AIChatResponse(content=str(e))
             return response
@@ -90,12 +91,12 @@ class ResponsesAIModel(BaseAIModel):
     @override
     async def get_chat_response_async(
         self,
-        system_prompt: Optional[str | AIPrompt] = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[Dict[Callable, Any]] = None,
-        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        system_prompt: str | AIPrompt | None = None,
+        history: Iterable[AIModelInteractionMessage] | None = None,
+        context: AIContext | None = None,
+        message: AIModelInteractionMessage | None = None,
+        functions: dict[Callable, Any] | None = None,
+        interaction_logger: Callable[[AIModelInteraction], None] | None = None,
         response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         if not isinstance(history, list):
@@ -107,7 +108,7 @@ class ResponsesAIModel(BaseAIModel):
             resp = await self.async_openai.responses.create(**parameters)
             response = self._create_ai_chat_response(resp)
             return response
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             _log.error("Error: %s", e)
             response = AIChatResponse(content=str(e))
             return response
@@ -140,8 +141,7 @@ class ResponsesAIModel(BaseAIModel):
 
         if functions:
             tools = []
-            for f, d in functions.items():
-                tools.append(d)
+            tools.append(functions.values())
         else:
             tools = None
 
@@ -299,8 +299,8 @@ class ResponsesAIModel(BaseAIModel):
     def _prepare_response_format(
         self,
         response_format: Literal["text", "json"]
-        | Type[Sequence[BaseModel | str | int | float | bool]]
-        | Type[BaseModel] = "text",
+        | type[Sequence[BaseModel | str | int | float | bool]]
+        | type[BaseModel] = "text",
     ) -> dict | None:
         if response_format == "text":
             ret = None
@@ -347,8 +347,8 @@ class ResponsesAIModel(BaseAIModel):
     def prepare_function_definition(
         cls,
         func: Callable[..., Any],
-        name: Optional[str] = None,
-        description: Optional[str] = None,
+        name: str | None = None,
+        description: str | None = None,
     ) -> FunctionToolParam:
         ai_function = cls.create_ai_function(func)
         if name:
@@ -370,7 +370,7 @@ class ResponsesAIModel(BaseAIModel):
             TypeError: If input is not a callable.
             ValueError: If the function signature is invalid or missing required information.
         """
-        parameters: Dict[str, Any] = {
+        parameters: dict[str, Any] = {
             "type": "object",
             "properties": {},
             "required": [],
@@ -411,8 +411,8 @@ class ResponsesAIModel(BaseAIModel):
                 A FunctionDefinition object representing the tool.
             """
             try:
-                properties = tool.inputSchema.get("properties", {})
-                required = tool.inputSchema.get("required", [])      
+                properties = tool.input_schema.get("properties", {})
+                required = tool.input_schema.get("required", [])
                 # if len(properties) != len(required):
                 #     required = list(properties.keys()) # Ensure all properties are marked as required for strict mode
                 # for _, v in properties.items():
@@ -435,15 +435,15 @@ class ResponsesAIModel(BaseAIModel):
                 return ret
             except Exception as e:
                 print(f"Error preparing MCP tool definition: {e}")
-                raise e
+                raise
 
     except ImportError:
         pass
 
     @staticmethod
-    def prepare_schema(model: Type[BaseModel]) -> dict:
+    def prepare_schema(model: type[BaseModel]) -> dict:
         schema = model.model_json_schema()
-        for _, v in schema["properties"].items():
+        for v in schema["properties"].values():
             v.pop("title", None)
         schema.pop("title", None)
         schema.pop("description", None)
