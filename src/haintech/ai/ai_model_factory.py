@@ -6,9 +6,10 @@ from haintech.ai.base.base_ai_model import BaseAIModel
 _log = logging.getLogger(__name__)
 
 
-class AIFactory:
+class AIModelFactory:
     def __init__(self, ai_model_classes: dict[str, type[BaseAIModel]] | None = None):
         self.ai_model_classes = ai_model_classes or {}
+        self.session_blob_manager = None
 
     def add_ai_model_class(self, vendor_name: str, clazz: type[BaseAIModel]) -> None:
         self.ai_model_classes[vendor_name] = clazz

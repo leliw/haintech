@@ -1,10 +1,10 @@
-from haintech.ai.ai_factory import AIFactory
+from haintech.ai.ai_model_factory import AIModelFactory
 from haintech.ai.google_genai import GoogleAIModel
 
 
 def test_get_ai_model_names():
     # Given: A factory with Google model
-    factory = AIFactory()
+    factory = AIModelFactory()
     factory.add_ai_model_class("google", GoogleAIModel)
     # When: Get model names
     ret = factory.get_ai_model_names()
@@ -12,9 +12,10 @@ def test_get_ai_model_names():
     assert len(ret) > 0
     assert any(r for r in ret if r.startswith("google/gemini"))
 
+
 def test_create_ai_model():
     # Given: A factory with Google model
-    factory = AIFactory({"google": GoogleAIModel})
+    factory = AIModelFactory({"google": GoogleAIModel})
     # And: vendor_model_name
     name = factory.get_ai_model_names()[0]
     # When: Create AI model
