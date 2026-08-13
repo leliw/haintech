@@ -3,6 +3,26 @@ from haintech.ai.base.base_ai_agent_async import BaseAIAgentAsync
 from haintech.ai.google_genai.google_ai_model import GoogleAIModel
 
 
+def test_get_ai_model_names():
+    # Given: A factory with Google model
+    factory = AIAgentFactory.create({"google": GoogleAIModel})
+    # When: Get model names
+    ret = factory.get_ai_model_names()
+    # Then: Gemini model is returned
+    assert len(ret) > 0
+    assert any(r for r in ret if r.startswith("google/gemini"))
+
+
+async def test_get_ai_model_names_async():
+    # Given: A factory with Google model
+    factory = AIAgentFactory.create({"google": GoogleAIModel})
+    # When: Get model names
+    ret = await factory.get_ai_model_names_async()
+    # Then: Gemini model is returned
+    assert len(ret) > 0
+    assert any(r for r in ret if r.startswith("google/gemini"))
+
+
 def test_create_agent():
     # Given: A factory
     factory = AIAgentFactory.create({"google": GoogleAIModel})
@@ -11,11 +31,14 @@ def test_create_agent():
     # Then: An agent is created
     assert isinstance(agent, BaseAIAgentAsync)
 
+
 def add(a: int, b: int) -> int:
     return a + b
 
+
 def sub(a: int, b: int) -> int:
     return a - b
+
 
 def test_get_function_names():
     # Given: A factory with functions
@@ -25,6 +48,7 @@ def test_get_function_names():
     # Then: They are as passed
     assert "add" in names
     assert "sub" in names
+
 
 def test_create_agent_with_factory_func():
     # Given: A factory with a function
@@ -36,6 +60,7 @@ def test_create_agent_with_factory_func():
     # And: The agent can use a function
     assert add in agent.functions
 
+
 def test_create_agent_without_factory_func():
     # Given: A factory with a function
     factory = AIAgentFactory.create({"google": GoogleAIModel}, functions=[add])
@@ -46,6 +71,7 @@ def test_create_agent_without_factory_func():
     # And: The agent can't use a function
     assert add not in agent.functions
 
+
 def test_create_agent_with_func():
     # Given: A factory without functions
     factory = AIAgentFactory.create({"google": GoogleAIModel})
@@ -55,6 +81,7 @@ def test_create_agent_with_func():
     assert isinstance(agent, BaseAIAgentAsync)
     # And: The agent can use a function
     assert add in agent.functions
+
 
 def test_create_agent_with_selected_func():
     # Given: A factory with functions

@@ -42,6 +42,9 @@ class AIAgentFactory:
     def get_ai_model_names(self, task: Literal["chat", "image", "embedding"] = "chat") -> list[str]:
         return self.ai_model_factory.get_ai_model_names(task)
 
+    async def get_ai_model_names_async(self, task: Literal["chat", "image", "embedding"] = "chat") -> list[str]:
+        return await self.ai_model_factory.get_ai_model_names_async(task)
+
     def create_ai_model(
         self, vendor_model_name: str, parameters: dict[str, str | int | float] | None = None
     ) -> BaseAIModel:

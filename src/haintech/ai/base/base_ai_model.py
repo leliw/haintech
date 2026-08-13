@@ -1,4 +1,5 @@
 import json
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable, Sequence
 from inspect import Parameter, signature
@@ -22,12 +23,19 @@ from ..model import (
     RAGItem,
 )
 
+_log = logging.getLogger(__name__)
+
 
 class BaseAIModel(ABC):
     @classmethod
     @abstractmethod
     def get_model_names(cls, task: str = "chat") -> list[str]:
         pass
+
+    @classmethod
+    async def get_model_names_async(cls, task: str = "chat") -> list[str]:
+        _log.warning("Method get_model_names_async() for class %s is not defined!", cls.__name__)
+        return cls.get_model_names(task)
 
     @abstractmethod
     def __init__(self, model_name: str, parameters: dict[str, str | int | float] | None = None):

@@ -23,6 +23,15 @@ class AIModelFactory:
                 ret.append(f"{provider_name}/{model_name}")
         return ret
 
+    async def get_ai_model_names_async(self, task: Literal["chat", "image", "embedding"] = "chat") -> list[str]:
+        """Returns available models formatted as vendor/model_name filtered by task."""
+        ret = []
+        for provider_name, clazz in self.ai_model_classes.items():
+            # Pass task down to model classes
+            for model_name in await clazz.get_model_names_async(task=task):
+                ret.append(f"{provider_name}/{model_name}")
+        return ret
+    
     def create_ai_model(
         self, vendor_model_name: str, parameters: dict[str, str | int | float] | None = None
     ) -> BaseAIModel:

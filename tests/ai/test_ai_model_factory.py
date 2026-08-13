@@ -12,6 +12,16 @@ def test_get_ai_model_names():
     assert len(ret) > 0
     assert any(r for r in ret if r.startswith("google/gemini"))
 
+async def test_get_ai_model_names_async():
+    # Given: A factory with Google model
+    factory = AIModelFactory()
+    factory.add_ai_model_class("google", GoogleAIModel)
+    # When: Get model names
+    ret = await factory.get_ai_model_names_async()
+    # Then: Gemini model is returned
+    assert len(ret) > 0
+    assert any(r for r in ret if r.startswith("google/gemini"))
+
 
 def test_create_ai_model():
     # Given: A factory with Google model

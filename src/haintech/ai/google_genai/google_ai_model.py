@@ -16,6 +16,7 @@ from google.genai.types import (
     GenerateContentConfig,
     GenerateContentResponse,
     GenerationConfig,
+    Model,
     Part,
     Schema,
     Tool,
@@ -48,7 +49,13 @@ class GoogleAIParameters(GenerationConfig):
 class GoogleAIModel(BaseAIModel):
     """Google AI implementation of BaseAIModel"""
 
-    _configured = False
+    _api_key: str | None = None
+    _client: genai.Client | None = None
+    _models_list: list[Model] | None = None
+
+    @classmethod
+    def setup(cls, api_key: str | None = None):
+        cls._api_key = api_key
 
     def __init__(
         self,
@@ -57,7 +64,7 @@ class GoogleAIModel(BaseAIModel):
         api_key: str | None = None,
     ):
         if api_key:
-            self.setup(api_key=api_key)
+            self._api_key = api_key
         self.model_name = model_name
         if not parameters:
             self.parameters = GenerationConfig()
@@ -67,19 +74,18 @@ class GoogleAIModel(BaseAIModel):
             self.parameters = GenerationConfig.model_validate(parameters)
 
     @classmethod
-    def setup(cls, api_key: str | None = None):
-        if not cls._configured:
-            cls.client = genai.Client(api_key=api_key)
-            cls._configured = True
-            _log.debug("Google AI Model configured")
+    def get_client(cls) -> genai.Client:
+        if not cls._client:
+            cls._client = genai.Client(api_key=cls._api_key)
+        return cls._client
 
     @override
     @classmethod
     def get_model_names(cls, task: str = "chat") -> list[str]:
-        if not cls._configured:
-            cls.setup()
+        if not cls._models_list:
+            cls._models_list = list(cls.get_client().models.list())
         ret = []
-        for m in cls.client.models.list():
+        for m in cls._models_list:
             if not m.supported_actions or "generateContent" not in m.supported_actions or not m.name:
                 continue
 
@@ -102,6 +108,15 @@ class GoogleAIModel(BaseAIModel):
             elif task == "image" and "image" in name or task == "embedding" and "embedding" in name:
                 ret.append(name)
         return ret
+
+    @override
+    @classmethod
+    async def get_model_names_async(cls, task: str = "chat") -> list[str]:
+        if not cls._models_list:
+            cls._models_list = []
+            async for model in await cls.get_client().aio.models.list():
+                cls._models_list.append(model)
+        return cls.get_model_names(task)
 
     @classmethod
     def _ends_with_month_year(cls, s: str) -> bool:
@@ -205,9 +220,6 @@ class GoogleAIModel(BaseAIModel):
         functions: dict[Callable, Any] | None,
         response_format: Literal["text", "json"] | dict = "text",
     ) -> dict[str, Any]:
-        if not self._configured:
-            self.setup()
-
         msg_list: list[ContentOrDict] = []
         if not message:
             message = history[-1]
@@ -251,7 +263,7 @@ class GoogleAIModel(BaseAIModel):
         message: list[Part] | Part,
     ) -> AIChatResponse:
         try:
-            chat = self.client.chats.create(model=self.model_name, config=config, history=history)
+            chat = self.get_client().chats.create(model=self.model_name, config=config, history=history)
             native_response = chat.send_message(message)
             return self._create_response_from_content_response(native_response)
         except Exception as e:
@@ -267,7 +279,7 @@ class GoogleAIModel(BaseAIModel):
         message: list[Part] | Part,
     ) -> AIChatResponse:
         try:
-            chat = self.client.aio.chats.create(model=self.model_name, config=config, history=history)
+            chat = self.get_client().aio.chats.create(model=self.model_name, config=config, history=history)
             native_response = await chat.send_message(message)
             return self._create_response_from_content_response(native_response)
         except Exception as e:

@@ -5,6 +5,7 @@ from itertools import chain
 from typing import Any, Literal, override
 
 from openai import AsyncOpenAI, OpenAI
+from openai.types import Model
 from openai.types.responses import (
     EasyInputMessageParam,
     FunctionToolParam,
@@ -35,29 +36,41 @@ _log = logging.getLogger(__name__)
 class ResponsesAIModel(BaseAIModel):
     """OpenAI implementation of BaseAIModel"""
 
-    _configured = False
+    _api_key: str | None = None
+    _openai: OpenAI | None = None
+    _async_openai: AsyncOpenAI | None = None
+    _models_list: list[Model] | None = None
 
     @classmethod
-    def setup(cls):
-        if not cls._configured:
-            cls.openai = OpenAI()
-            cls.async_openai = AsyncOpenAI()
-            cls._configured = True
-            _log.debug("OpenAI AI Model configured")
+    def setup(cls, api_key: str | None = None):
+        cls._api_key = api_key
 
     def __init__(
         self,
         model_name: str = "gpt-5.4-nano",
         parameters: ResponsesAIParameters | dict[str, Any] | None = None,
     ):
-        self.setup()
         self.model_name = model_name
         self.parameters = parameters or ResponsesAIParameters()
 
     @classmethod
+    def get_openai(cls) -> OpenAI:
+        if not cls._openai:
+            cls._openai = OpenAI(api_key=cls._api_key)
+        return cls._openai
+
+    @classmethod
+    def get_async_openai(cls) -> AsyncOpenAI:
+        if not cls._async_openai:
+            cls._async_openai = AsyncOpenAI(api_key=cls._api_key)
+        return cls._async_openai
+
+    @override
+    @classmethod
     def get_model_names(cls, task: str = "chat") -> list[str]:
-        cls.setup()
-        raw_models = [m.id for m in cls.openai.models.list().data]
+        if not cls._models_list:
+            cls._models_list = cls.get_openai().models.list().data
+        raw_models = [m.id for m in cls._models_list]
         ret = []
 
         for name in raw_models:
@@ -97,6 +110,13 @@ class ResponsesAIModel(BaseAIModel):
 
         return ret
 
+    @override
+    @classmethod
+    async def get_model_names_async(cls, task: str = "chat") -> list[str]:
+        if not cls._models_list:
+            cls._models_list = (await cls.get_async_openai().models.list()).data
+        return cls.get_model_names(task)
+
     @classmethod
     def _ends_with_date(cls, s: str) -> bool:
         import re
@@ -121,7 +141,7 @@ class ResponsesAIModel(BaseAIModel):
             system_prompt, history, context, message, functions, response_format
         )
         try:
-            resp: Response = self.openai.responses.create(**parameters)
+            resp: Response = self.get_openai().responses.create(**parameters)
             response = self._create_ai_chat_response(resp)
             return response
         except Exception as e:  # noqa: BLE001
@@ -150,7 +170,7 @@ class ResponsesAIModel(BaseAIModel):
             system_prompt, history, context, message, functions, response_format
         )
         try:
-            resp = await self.async_openai.responses.create(**parameters)
+            resp = await self.get_async_openai().responses.create(**parameters)
             response = self._create_ai_chat_response(resp)
             return response
         except Exception as e:  # noqa: BLE001
