@@ -59,7 +59,7 @@ class AIMCPAgentFactory(AIAgentFactory):
         else:
             mcps = self.get_mcp_servers(mcp_servers)  # pyright: ignore[reportArgumentType]
         return AIMCPAgent(
-            ai_model=self.ai_model_factory.create_ai_model(vendor_model_name, ai_model_parameters),
+            ai_model=self.create_ai_model(vendor_model_name, ai_model_parameters),
             mcp_servers=mcps,
             system_prompt=system_prompt,
             searcher=searcher or self.searcher,

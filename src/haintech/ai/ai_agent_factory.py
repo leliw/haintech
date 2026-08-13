@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Callable
+from typing import Literal
 
 from haintech.ai.ai_model_factory import AIModelFactory
 from haintech.ai.base.base_agent_searcher import BaseAgentSearcher
@@ -38,6 +39,14 @@ class AIAgentFactory:
         ai_model_factory = AIModelFactory(ai_model_classes)
         return cls(ai_model_factory, searcher, session_blob_manager, functions)
 
+    def get_ai_model_names(self, task: Literal["chat", "image", "embedding"] = "chat") -> list[str]:
+        return self.ai_model_factory.get_ai_model_names(task)
+
+    def create_ai_model(
+        self, vendor_model_name: str, parameters: dict[str, str | int | float] | None = None
+    ) -> BaseAIModel:
+        return self.ai_model_factory.create_ai_model(vendor_model_name, parameters)
+
     def create_ai_agent_async(
         self,
         vendor_model_name: str,
@@ -52,7 +61,7 @@ class AIAgentFactory:
         else:
             fns = self.get_functions(functions)  # pyright: ignore[reportArgumentType]
         return BaseAIAgentAsync(
-            ai_model=self.ai_model_factory.create_ai_model(vendor_model_name, ai_model_parameters),
+            ai_model=self.create_ai_model(vendor_model_name, ai_model_parameters),
             system_prompt=system_prompt,
             searcher=searcher or self.searcher,
             functions=fns,
@@ -65,7 +74,7 @@ class AIAgentFactory:
     def get_functions(self, names: list[str] | None = None) -> list[Callable]:
         if names is None:
             return list(self.functions.values())
-        
+
         selected_functions = []
         for name in set(names):
             if name not in self.functions:
@@ -74,5 +83,5 @@ class AIAgentFactory:
                     f"Available functions: {self.get_function_names()}"
                 )
             selected_functions.append(self.functions[name])
-            
+
         return selected_functions
