@@ -37,6 +37,10 @@ class GoogleAIModel(BaseAIModel):
 
     _configured = False
 
+    @classmethod
+    def get_vendor_name(cls) -> str:
+        return "google"
+
     def __init__(
         self,
         model_name: str = "gemini-2.5-flash",
@@ -399,7 +403,7 @@ class GoogleAIModel(BaseAIModel):
                 A FunctionDefinition object representing the tool.
             """
             parameters = protos.Schema(type=protos.Type.OBJECT, properties={}, required=[])
-            for param_name, param in tool.inputSchema["properties"].items():
+            for param_name, param in tool.input_schema["properties"].items():
                 match param["type"]:
                     case "integer":
                         type = protos.Type.INTEGER
@@ -408,7 +412,7 @@ class GoogleAIModel(BaseAIModel):
                     case _:
                         type = protos.Type.STRING
                 parameters.properties[param_name] = protos.Schema(type=type)
-            parameters.required = tool.inputSchema["required"] if "required" in tool.inputSchema else []
+            parameters.required = tool.input_schema.get("required", [])
             return protos.FunctionDeclaration(
                 name=tool.name,
                 description=tool.description,

@@ -10,6 +10,10 @@ from haintech.ai.open_ai import OpenAIModel, OpenAIParameters
 class DeepSeekAIModel(OpenAIModel):
     _log = logging.getLogger(__name__)
 
+    @classmethod
+    def get_vendor_name(cls) -> str:
+        return "deepseek"
+
     def __init__(
         self,
         model_name: str = "deepseek-chat",

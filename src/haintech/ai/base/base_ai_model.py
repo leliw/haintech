@@ -29,6 +29,11 @@ _log = logging.getLogger(__name__)
 class BaseAIModel(ABC):
     @classmethod
     @abstractmethod
+    def get_vendor_name(cls) -> str:
+        pass
+
+    @classmethod
+    @abstractmethod
     def get_model_names(cls, task: str = "chat") -> list[str]:
         pass
 
@@ -39,7 +44,10 @@ class BaseAIModel(ABC):
 
     @abstractmethod
     def __init__(self, model_name: str, parameters: dict[str, str | int | float] | None = None):
-        pass
+        self.model_name = model_name
+
+    def get_vendor_model_name(self) -> str:
+        return f"{self.get_vendor_name()}/{self.model_name}"
 
     def get_response(
         self,

@@ -5,7 +5,7 @@ from haintech.ai.google_genai.google_ai_model import GoogleAIModel
 
 def test_get_ai_model_names():
     # Given: A factory with Google model
-    factory = AIAgentFactory.create({"google": GoogleAIModel})
+    factory = AIAgentFactory.create([GoogleAIModel])
     # When: Get model names
     ret = factory.get_ai_model_names()
     # Then: Gemini model is returned
@@ -15,7 +15,7 @@ def test_get_ai_model_names():
 
 async def test_get_ai_model_names_async():
     # Given: A factory with Google model
-    factory = AIAgentFactory.create({"google": GoogleAIModel})
+    factory = AIAgentFactory.create([GoogleAIModel])
     # When: Get model names
     ret = await factory.get_ai_model_names_async()
     # Then: Gemini model is returned
@@ -25,7 +25,7 @@ async def test_get_ai_model_names_async():
 
 def test_create_agent():
     # Given: A factory
-    factory = AIAgentFactory.create({"google": GoogleAIModel})
+    factory = AIAgentFactory.create([GoogleAIModel])
     # When: Create agent
     agent = factory.create_ai_agent_async("google/gemini-3.5-flash-lite")
     # Then: An agent is created
@@ -42,7 +42,7 @@ def sub(a: int, b: int) -> int:
 
 def test_get_function_names():
     # Given: A factory with functions
-    factory = AIAgentFactory.create({"google": GoogleAIModel}, functions=[add, sub])
+    factory = AIAgentFactory.create([GoogleAIModel], functions=[add, sub])
     # When: Get function names
     names = factory.get_function_names()
     # Then: They are as passed
@@ -52,7 +52,7 @@ def test_get_function_names():
 
 def test_create_agent_with_factory_func():
     # Given: A factory with a function
-    factory = AIAgentFactory.create({"google": GoogleAIModel}, functions=[add])
+    factory = AIAgentFactory.create([GoogleAIModel], functions=[add])
     # When: Create agent
     agent = factory.create_ai_agent_async("google/gemini-3.5-flash-lite")
     # Then: An agent is created
@@ -63,7 +63,7 @@ def test_create_agent_with_factory_func():
 
 def test_create_agent_without_factory_func():
     # Given: A factory with a function
-    factory = AIAgentFactory.create({"google": GoogleAIModel}, functions=[add])
+    factory = AIAgentFactory.create([GoogleAIModel], functions=[add])
     # When: Create agent with an empty function list
     agent = factory.create_ai_agent_async("google/gemini-3.5-flash-lite", functions=[])
     # Then: An agent is created
@@ -74,7 +74,7 @@ def test_create_agent_without_factory_func():
 
 def test_create_agent_with_func():
     # Given: A factory without functions
-    factory = AIAgentFactory.create({"google": GoogleAIModel})
+    factory = AIAgentFactory.create([GoogleAIModel])
     # When: Create agent with a function
     agent = factory.create_ai_agent_async("google/gemini-3.5-flash-lite", functions=[add])
     # Then: An agent is created
@@ -85,7 +85,7 @@ def test_create_agent_with_func():
 
 def test_create_agent_with_selected_func():
     # Given: A factory with functions
-    factory = AIAgentFactory.create({"google": GoogleAIModel}, functions=[add, sub])
+    factory = AIAgentFactory.create([GoogleAIModel], functions=[add, sub])
     # When: Create agent with a selected function
     agent = factory.create_ai_agent_async("google/gemini-3.5-flash-lite", functions=["sub"])
     # Then: An agent is created

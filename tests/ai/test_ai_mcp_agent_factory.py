@@ -9,7 +9,7 @@ from haintech.ai.google_genai.google_ai_model import GoogleAIModel
 
 def test_create_agent():
     # Given: A factory
-    factory = AIMCPAgentFactory.create({"google": GoogleAIModel})
+    factory = AIMCPAgentFactory.create([GoogleAIModel])
     # When: Create agent
     agent = factory.create_ai_mcp_agent("google/gemini-3.5-flash-lite")
     # Then: An agent is created
@@ -27,7 +27,7 @@ sub = MCPServerStdio(
 
 def test_get_mcp_server_names():
     # Given: A factory with mcp server
-    factory = AIMCPAgentFactory.create({"google": GoogleAIModel}, mcp_servers=[add, sub])
+    factory = AIMCPAgentFactory.create([GoogleAIModel], mcp_servers=[add, sub])
     # When: Get mcp server names
     names = factory.get_mcp_server_names()
     # Then: They are as passed
@@ -37,7 +37,7 @@ def test_get_mcp_server_names():
 
 def test_create_agent_with_factory_mcp():
     # Given: A factory with a mcp server
-    factory = AIMCPAgentFactory.create({"google": GoogleAIModel}, mcp_servers=[add])
+    factory = AIMCPAgentFactory.create([GoogleAIModel], mcp_servers=[add])
     # When: Create agent
     agent = factory.create_ai_mcp_agent("google/gemini-3.5-flash-lite")
     # Then: An agent is created
@@ -48,7 +48,7 @@ def test_create_agent_with_factory_mcp():
 
 def test_create_agent_without_factory_mcp():
     # Given: A factory with a mcp server
-    factory = AIMCPAgentFactory.create({"google": GoogleAIModel}, mcp_servers=[add])
+    factory = AIMCPAgentFactory.create([GoogleAIModel], mcp_servers=[add])
     # When: Create agent with an empty mcp server list
     agent = factory.create_ai_mcp_agent("google/gemini-3.5-flash-lite", mcp_servers=[])
     # Then: An agent is created
@@ -59,7 +59,7 @@ def test_create_agent_without_factory_mcp():
 
 def test_create_agent_with_mcp():
     # Given: A factory without mcp servers
-    factory = AIMCPAgentFactory.create({"google": GoogleAIModel})
+    factory = AIMCPAgentFactory.create([GoogleAIModel])
     # When: Create agent with a mcp server
     agent = factory.create_ai_mcp_agent("google/gemini-3.5-flash-lite", mcp_servers=[add])
     # Then: An agent is created
@@ -70,7 +70,7 @@ def test_create_agent_with_mcp():
 
 def test_create_agent_with_selected_mcp():
     # Given: A factory with mcp servers
-    factory = AIMCPAgentFactory.create({"google": GoogleAIModel}, mcp_servers=[add, sub])
+    factory = AIMCPAgentFactory.create([GoogleAIModel], mcp_servers=[add, sub])
     # When: Create agent with a selected mcp server
     agent = factory.create_ai_mcp_agent("google/gemini-3.5-flash-lite", mcp_servers=["sub"])
     # Then: An agent is created

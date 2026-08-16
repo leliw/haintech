@@ -7,12 +7,14 @@ _log = logging.getLogger(__name__)
 
 
 class AIModelFactory:
-    def __init__(self, ai_model_classes: dict[str, type[BaseAIModel]] | None = None):
-        self.ai_model_classes = ai_model_classes or {}
+    def __init__(self, ai_model_classes: list[type[BaseAIModel]] | None = None):
+        self.ai_model_classes = {}
         self.session_blob_manager = None
+        for clazz in ai_model_classes or []:
+            self.add_ai_model_class(clazz)
 
-    def add_ai_model_class(self, vendor_name: str, clazz: type[BaseAIModel]) -> None:
-        self.ai_model_classes[vendor_name] = clazz
+    def add_ai_model_class(self, clazz: type[BaseAIModel]) -> None:
+        self.ai_model_classes[clazz.get_vendor_name()] = clazz
 
     def get_ai_model_names(self, task: Literal["chat", "image", "embedding"] = "chat") -> list[str]:
         """Returns available models formatted as vendor/model_name filtered by task."""

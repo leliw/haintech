@@ -31,7 +31,7 @@ class AIMCPAgentFactory(AIAgentFactory):
     @classmethod
     def create(
         cls,
-        ai_model_classes: dict[str, type[BaseAIModel]],
+        ai_model_classes: list[type[BaseAIModel]],
         searcher: BaseAgentSearcher | None = None,
         session_blob_manager: AsyncSessionBlobManager | None = None,
         functions: list[Callable] | None = None,

@@ -30,6 +30,10 @@ class OpenAIModel(BaseAIModel):
     _configured = False
 
     @classmethod
+    def get_vendor_name(cls) -> str:
+        return "openai"
+
+    @classmethod
     def setup(cls):
         if not cls._configured:
             cls.openai = OpenAI()
