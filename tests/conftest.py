@@ -19,7 +19,7 @@ def log():
 @pytest.fixture(
     params=[
         OpenAIModel(model_name="gpt-5.4-nano", parameters={"temperature": 0}),
-        GoogleAIModel(model_name="gemini-2.5-flash-lite", parameters={"temperature": 0}),
+        GoogleAIModel(model_name="gemini-3.5-flash-lite", parameters={"temperature": 0}),
     ],
     ids=["OpenAI-nano", "GoogleAI-flash-lite"],
     scope="session",

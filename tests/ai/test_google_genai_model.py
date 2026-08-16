@@ -1,17 +1,17 @@
-from pydantic import BaseModel
 import pytest
 from ampf.local import LocalFactory
+from pydantic import BaseModel
 
 from haintech.ai.exceptions import UnsupportedMimeTypeError
-from haintech.ai.model import AIModelInteractionMessage
 from haintech.ai.google_genai import GoogleAIModel, GoogleAIParameters
+from haintech.ai.model import AIModelInteractionMessage
 
 
 @pytest.fixture(
     params=[
-        "gemini-3.1-flash-lite",
-        "gemini-3.5-flash",
-        "gemini-2.5-pro",
+        "gemini-3.5-flash-lite",
+        "gemini-3.6-flash",
+        # "gemini-2.5-pro",
         #
         "nano-banana-pro-preview",
         "gemini-3.1-pro-preview",
@@ -59,7 +59,7 @@ def test_get_chat_response_with_blob(file_name: str):
 
 def test_get_chat_response_with_text_blob():
     # Given: Google AI Model
-    ai_model = GoogleAIModel("gemini-2.5-flash-lite", parameters=GoogleAIParameters(temperature=0))
+    ai_model = GoogleAIModel()
     # And: A text blob with answer
     blob_storage = LocalFactory("./tests/data").create_blob_storage("")
     blob_storage.default_ext = None

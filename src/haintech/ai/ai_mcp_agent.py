@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, List, Optional
+from collections.abc import Callable
 
 from haintech.ai.interfaces import AsyncSessionBlobManager
 
@@ -12,7 +12,7 @@ from .model import (
 try:
     from agents.mcp import MCPServer
 
-    class MCPAIAgent(BaseAIAgentAsync):
+    class AIMCPAgent(BaseAIAgentAsync):
         """AI Agent that can interact with tools provided via Model Context Protocol (MCP).
 
         This agent extends the `BaseAIAgentAsync` to connect to one or more `MCPServer`
@@ -25,14 +25,14 @@ try:
         def __init__(
             self,
             ai_model: BaseAIModel,
-            mcp_servers: List[MCPServer],
-            name: Optional[str] = None,
-            description: Optional[str] = None,
-            prompt: Optional[str | AIPrompt] = None,
-            session: Optional[AIModelSession] = None,
-            searcher: Optional[BaseRAGSearcher] = None,
-            functions: Optional[List[Callable]] = None,
-            session_blob_manager: Optional[AsyncSessionBlobManager] = None,
+            mcp_servers: list[MCPServer],
+            name: str | None = None,
+            description: str | None = None,
+            system_prompt: str | AIPrompt | None = None,
+            session: AIModelSession | None = None,
+            searcher: BaseRAGSearcher | None = None,
+            functions: list[Callable] | None = None,
+            session_blob_manager: AsyncSessionBlobManager | None = None,
         ):
             """Initializes the MCPAIAgent.
 
@@ -41,17 +41,17 @@ try:
                 mcp_servers: A list of MCPServer instances to connect to.
                 name: The name of the agent.
                 description: A description of the agent's purpose.
-                prompt: A structured prompt for the agent.
-                context: A string providing context for the agent's conversations.
+                system_prompt: A prompt for the agent.
                 session: The session object to store conversation history.
                 searcher: A RAG searcher for retrieving documents.
                 functions: A list of additional callable functions to be used as tools.
+                session_blob_manager: Provides download_blob method
             """
             super().__init__(
                 ai_model=ai_model,
                 name=name,
                 description=description,
-                system_prompt=prompt,
+                system_prompt=system_prompt,
                 session=session,
                 searcher=searcher,
                 functions=functions,
@@ -90,15 +90,20 @@ try:
                 for tool in tools:
                     # Capture tool_name by making it a default argument
                     # to avoid closure issues in the loop.
-                    async def mcp_call_tool(tool_name=tool.name, **kwargs):
-                        """Dynamically created async function to call an MCP tool."""
+                    async def mcp_call_tool(tool_name=tool.name, server=server, **kwargs):
+                        """Dynamically created async function to call an MCP tool.
+
+                        Bind `server` as a default argument to avoid late-binding closure
+                        issues so each generated function retains the correct server
+                        instance from the loop.
+                        """
                         return await server.call_tool(tool_name, kwargs)
 
                     # Register the dynamically created function as a tool for the agent.
                     self.function_names[tool.name] = mcp_call_tool
                     self.functions[self.function_names[tool.name]] = self.ai_model.prepare_mcp_tool_definition(tool)
 
-
+    MCPAIAgent = AIMCPAgent
 except ImportError:
     # The 'agents-mcp' package is optional. If it's not installed,
     # the MCPAIAgent class will not be available, and importing it will raise an ImportError.

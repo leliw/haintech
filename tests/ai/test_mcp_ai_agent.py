@@ -1,8 +1,9 @@
+import pytest
 from ampf.local import LocalAsyncFactory
-from haintech.ai import MCPAIAgent
+
+from haintech.ai.ai_mcp_agent import MCPAIAgent
 from haintech.ai.google_genai import GoogleAIModel, GoogleAIParameters
 from haintech.ai.model import AIChatSession, AIModelInteractionMessage
-import pytest
 
 
 @pytest.mark.parametrize("file_name", ["answer.txt"])
@@ -15,7 +16,7 @@ async def test_get_response_with_blob_location(file_name: str):
     ai_agent = MCPAIAgent(
         ai_model=ai_model,
         mcp_servers=[],
-        prompt="You are a helpful assistant.",
+        system_prompt="You are a helpful assistant.",
         session=session,
         session_blob_manager=factory,
     )

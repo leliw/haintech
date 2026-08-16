@@ -1,7 +1,6 @@
 import logging
 import os
 from pathlib import Path
-from typing import List, Optional
 
 import pytest
 from agents.mcp import MCPServer, MCPServerStdio
@@ -10,7 +9,7 @@ from haintech.ai import (
     AIChatSession,
     BaseAIModel,
 )
-from haintech.ai.mcp_ai_agent import MCPAIAgent
+from haintech.ai.ai_mcp_agent import AIMCPAgent
 
 
 @pytest.fixture(scope="session")
@@ -30,12 +29,12 @@ def hr_mcp_server():
     return MCPServerStdio(params={"command": "uv", "args": ["--directory", str(curr_dir), "run", "mcp_server.py"]})
 
 
-class HRAgent(MCPAIAgent):
+class HRAgent(AIMCPAgent):
     def __init__(
         self,
         ai_model: BaseAIModel,
-        mcp_servers: List[MCPServer],
-        session: Optional[AIChatSession] = None,
+        mcp_servers: list[MCPServer],
+        session: AIChatSession | None = None,
     ):
         super().__init__(
             ai_model=ai_model,
@@ -48,7 +47,7 @@ class HRAgent(MCPAIAgent):
 @pytest.mark.asyncio
 async def test(mcp_server, ai_model: BaseAIModel):
     logging.getLogger("haintech").setLevel(logging.DEBUG)
-    async with MCPAIAgent(ai_model=ai_model, mcp_servers=[mcp_server]) as agent:
+    async with AIMCPAgent(ai_model=ai_model, mcp_servers=[mcp_server]) as agent:
         tools = await mcp_server.list_tools(None, None)
         assert len(tools) == 14
         response = await agent.get_text_response("Ile plików jest w katalogu tests/data/samples? Podaj liczbę.")
@@ -84,6 +83,7 @@ async def test_agent_with_acceptance(ai_model: BaseAIModel, hr_mcp_server):
         response = await ai_agent.accept_tools(response.tool_calls[0].id)  # type: ignore
     # Then: I should get answer
     assert response.content and "26" in response.content
+
 
 @pytest.mark.asyncio
 async def test_agent_without_context(ai_model: BaseAIModel, hr_mcp_server):

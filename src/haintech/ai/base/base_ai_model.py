@@ -1,8 +1,10 @@
 import json
+import logging
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable, Sequence
 from inspect import Parameter, signature
 from types import UnionType
-from typing import Any, Callable, Dict, Iterable, Literal, Optional, Sequence, Type
+from typing import Any, Literal
 
 from ampf.base import Blob, BlobLocation
 from openai.types.shared_params import FunctionDefinition
@@ -21,8 +23,24 @@ from ..model import (
     RAGItem,
 )
 
+_log = logging.getLogger(__name__)
+
 
 class BaseAIModel(ABC):
+    @classmethod
+    @abstractmethod
+    def get_model_names(cls, task: str = "chat") -> list[str]:
+        pass
+
+    @classmethod
+    async def get_model_names_async(cls, task: str = "chat") -> list[str]:
+        _log.warning("Method get_model_names_async() for class %s is not defined!", cls.__name__)
+        return cls.get_model_names(task)
+
+    @abstractmethod
+    def __init__(self, model_name: str, parameters: dict[str, str | int | float] | None = None):
+        pass
+
     def get_response(
         self,
         message: str,
@@ -67,8 +85,8 @@ class BaseAIModel(ABC):
     def _prepare_response_format(
         self,
         response_format: Literal["text", "json"]
-        | Type[Sequence[BaseModel | str | int | float | bool]]
-        | Type[BaseModel] = "text",
+        | type[Sequence[BaseModel | str | int | float | bool]]
+        | type[BaseModel] = "text",
     ) -> dict:
         if response_format == "text":
             ret = {"type": "text"}
@@ -114,7 +132,7 @@ class BaseAIModel(ABC):
     def get_response_typed[T: BaseModel](
         self,
         message: str,
-        response_format: Type[T],
+        response_format: type[T],
         system_prompt: str | None = None,
         blob_locations: list[BlobLocation] | None = None,
         blobs: list[Blob] | None = None,
@@ -131,7 +149,7 @@ class BaseAIModel(ABC):
     def get_response_list_typed[T: BaseModel](
         self,
         message: str,
-        response_format: Type[T],
+        response_format: type[T],
         system_prompt: str | None = None,
         blob_locations: list[BlobLocation] | None = None,
         blobs: list[Blob] | None = None,
@@ -149,7 +167,7 @@ class BaseAIModel(ABC):
     def get_response_list[T: str | int | float | bool](
         self,
         message: str,
-        type: Type[T] = str,
+        type: type[T] = str,
         system_prompt: str | None = None,
         blob_locations: list[BlobLocation] | None = None,
         blobs: list[Blob] | None = None,
@@ -167,7 +185,7 @@ class BaseAIModel(ABC):
     async def get_response_typed_async[T: BaseModel](
         self,
         message: str,
-        response_format: Type[T],
+        response_format: type[T],
         system_prompt: str | None = None,
         blob_locations: list[BlobLocation] | None = None,
         blobs: list[Blob] | None = None,
@@ -184,7 +202,7 @@ class BaseAIModel(ABC):
     async def get_response_list_typed_async[T: BaseModel](
         self,
         message: str,
-        response_format: Type[T],
+        response_format: type[T],
         system_prompt: str | None = None,
         blob_locations: list[BlobLocation] | None = None,
         blobs: list[Blob] | None = None,
@@ -202,7 +220,7 @@ class BaseAIModel(ABC):
     async def get_response_list_async[T: str | int | float | bool](
         self,
         message: str,
-        type: Type[T] = str,
+        type: type[T] = str,
         system_prompt: str | None = None,
         blob_locations: list[BlobLocation] | None = None,
         blobs: list[Blob] | None = None,
@@ -220,12 +238,12 @@ class BaseAIModel(ABC):
     @abstractmethod
     def get_chat_response(
         self,
-        system_prompt: Optional[str | AIPrompt] = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[Dict[Callable, Any]] = None,
-        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        system_prompt: str | AIPrompt | None = None,
+        history: Iterable[AIModelInteractionMessage] | None = None,
+        context: AIContext | None = None,
+        message: AIModelInteractionMessage | None = None,
+        functions: dict[Callable, Any] | None = None,
+        interaction_logger: Callable[[AIModelInteraction], None] | None = None,
         response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         """Return chat response from LLM
@@ -241,16 +259,15 @@ class BaseAIModel(ABC):
         Returns:
             LLM response
         """
-        pass
 
     async def get_chat_response_async(
         self,
-        system_prompt: Optional[str | AIPrompt] = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[Dict[Callable, Any]] = None,
-        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        system_prompt: str | AIPrompt | None = None,
+        history: Iterable[AIModelInteractionMessage] | None = None,
+        context: AIContext | None = None,
+        message: AIModelInteractionMessage | None = None,
+        functions: dict[Callable, Any] | None = None,
+        interaction_logger: Callable[[AIModelInteraction], None] | None = None,
         response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         return self.get_chat_response(
@@ -338,10 +355,10 @@ class BaseAIModel(ABC):
         Returns:
             A FunctionDefinition object representing the callable.  Returns None if input is invalid.
         Raises:
-            TypeError: If input is not a callable.
+            typeError: If input is not a callable.
             ValueError: If the function signature is invalid or missing required information.
         """
-        parameters: Dict[str, Any] = {
+        parameters: dict[str, Any] = {
             "type": "object",
             "properties": {},
             "required": [],
@@ -371,8 +388,8 @@ class BaseAIModel(ABC):
     def prepare_function_definition(
         cls,
         func: Callable[..., Any],
-        name: Optional[str] = None,
-        description: Optional[str] = None,
+        name: str | None = None,
+        description: str | None = None,
     ) -> FunctionDefinition:
         """Creates an OpenAI FunctionDefinition from a Python callable.
 
@@ -384,7 +401,7 @@ class BaseAIModel(ABC):
         Returns:
             A FunctionDefinition object representing the callable.  Returns None if input is invalid.
         Raises:
-            TypeError: If input is not a callable.
+            typeError: If input is not a callable.
             ValueError: If the function signature is invalid or missing required information.
         """
         ai_function = cls.create_ai_function(func)
@@ -403,7 +420,7 @@ class BaseAIModel(ABC):
         Returns:
             A AIFunction object representing the callable.  Returns None if input is invalid.
         Raises:
-            TypeError: If input is not a callable.
+            typeError: If input is not a callable.
             ValueError: If the function signature is invalid or missing required information.
         """
         if not callable(func):
@@ -457,7 +474,7 @@ class BaseAIModel(ABC):
         from agents.mcp import MCPServer
         from mcp import Tool as MCPTool
 
-        def prepare_mcp_tool_definition(self, tool: MCPTool) -> Dict[str, Any]:
+        def prepare_mcp_tool_definition(self, tool: MCPTool) -> dict[str, Any]:
             """Creates a FunctionDefinition from an MCP Tool.
 
             It can be overriden if other models expect different definition
@@ -472,16 +489,16 @@ class BaseAIModel(ABC):
                     "name": tool.name,
                     "description": tool.description,
                 }
-                if tool.inputSchema["properties"]:
+                if tool.input_schema["properties"]:
                     ret["parameters"] = {
                         "type": "object",
-                        "properties": tool.inputSchema["properties"],
-                        "required": tool.inputSchema["required"],
+                        "properties": tool.input_schema["properties"],
+                        "required": tool.input_schema["required"],
                     }
                 return ret
             except Exception as e:
                 print(f"Error preparing MCP tool definition: {e}")
-                raise e
+                raise
 
     except ImportError:
         pass
