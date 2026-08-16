@@ -1,10 +1,11 @@
 import uuid
 from abc import ABC, abstractmethod
-from datetime import datetime
-from typing import Any, Dict, Iterator, List, Optional, override
+from collections.abc import Iterator
+from datetime import UTC, datetime
+from typing import Any, override
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
 from ampf.base import Blob, BlobLocation
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class RAGQuery(BaseModel):
@@ -13,21 +14,21 @@ class RAGQuery(BaseModel):
     """
 
     text: str
-    keywords: Optional[List[str]] = None
+    keywords: list[str] | None = None
     limit: int = 5
 
 
 class RAGItem(BaseModel):
-    item_id: Optional[str] = None
-    title: Optional[str] = None
-    url: Optional[str] = None
-    description: Optional[str] = None
-    keywords: List[str] = Field(
+    item_id: str | None = None
+    title: str | None = None
+    url: str | None = None
+    description: str | None = None
+    keywords: list[str] = Field(
         default_factory=list,
         description="List of keywords associated with the item.",
     )
     content: str
-    metadata: Dict[str, str] = Field(
+    metadata: dict[str, str] = Field(
         default_factory=dict,
         description="Additional metadata for the item.",
     )
@@ -36,9 +37,9 @@ class RAGItem(BaseModel):
 class AIModelToolCall(BaseModel):
     """Tool call request returned by AIModel"""
 
-    id: Optional[str] = None
+    id: str | None = None
     function_name: str
-    arguments: Dict[str, Any]
+    arguments: dict[str, Any]
     thought_signature: str | None = Field(None, description="Thought signature required by Google API")
 
     def __str__(self):
@@ -71,12 +72,12 @@ class AIModelInteractionMessage(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     role: str
-    name: Optional[str] = None
-    tool_call_id: Optional[str] = None  # Only for role=tool
-    content: Optional[str] = None
-    blob_locations: List[BlobLocation] = Field(default_factory=list)
-    blobs: Optional[List[Blob]] = Field(exclude=True, repr=False, default_factory=list)
-    tool_calls: Optional[List[AIModelToolCall]] = None
+    name: str | None = None
+    tool_call_id: str | None = None  # Only for role=tool
+    content: str | None = None
+    blob_locations: list[BlobLocation] = Field(default_factory=list)
+    blobs: list[Blob] | None = Field(exclude=True, repr=False, default_factory=list)
+    tool_calls: list[AIModelToolCall] | None = None
 
     @classmethod
     def create_from_response(cls, response: AIChatResponse):
@@ -111,20 +112,20 @@ class AIPrompt(BaseModel):
     According to: <https://cloud.google.com/vertex-ai/generative-ai/docs/learn/prompts/prompt-design-strategies#components-of-a-prompt>
     """
 
-    persona: Optional[str] = None
-    objective: Optional[str] = None
-    instructions: Optional[str] = None
-    constraints: Optional[str] = None
-    context: Optional[str] = None
-    documents: List[str | RAGItem] = Field(default_factory=list)
-    output_format: Optional[str] = None
-    examples: List[str] = Field(default_factory=list)
-    recap: Optional[str] = None
+    persona: str | None = None
+    objective: str | None = None
+    instructions: str | None = None
+    constraints: str | None = None
+    context: str | None = None
+    documents: list[str | RAGItem] = Field(default_factory=list)
+    output_format: str | None = None
+    examples: list[str] = Field(default_factory=list)
+    recap: str | None = None
 
 
 class AIContext(BaseModel):
-    context: Optional[str] = None
-    documents: List[str | RAGItem] = Field(default_factory=list)
+    context: str | None = None
+    documents: list[str | RAGItem] = Field(default_factory=list)
 
 
 class AIModelInteraction[T: AIModelInteractionMessage](BaseModel):
@@ -132,15 +133,15 @@ class AIModelInteraction[T: AIModelInteractionMessage](BaseModel):
 
     uid: str = Field(default_factory=lambda: uuid.uuid4().hex)
     model: str
-    tools: Optional[List[AIModelInteractionTool]] = None
-    parallel_tool_calls: Optional[bool] = None
-    response_format: dict | None  = None
-    context: Optional[AIContext] = None
-    prompt: Optional[str | AIPrompt] = None
-    history: List[T]
-    message: Optional[T] = None
-    response: Optional[AIChatResponse] = Field(default=None, exclude=True)
-    response_message: Optional[T] = None
+    tools: list[AIModelInteractionTool] | None = None
+    parallel_tool_calls: bool | None = None
+    response_format: dict | None = None
+    context: AIContext | None = None
+    prompt: str | AIPrompt | None = None
+    history: list[T]
+    message: T | None = None
+    response: AIChatResponse | None = Field(default=None, exclude=True)
+    response_message: T | None = None
 
     model_config = ConfigDict(validate_assignment=True)
 
@@ -162,19 +163,16 @@ class AIModelSession[T: AIModelInteractionMessage](ABC):
     @abstractmethod
     def add_interaction(self, interaction: AIModelInteraction[T]) -> None:
         """Add interaction to session."""
-        pass
 
     @abstractmethod
-    def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
+    def get_last_interaction(self) -> AIModelInteraction[T] | None:
         """Get last response (from last interaction)."""
-        pass
 
     @abstractmethod
     def messages_iterator(self) -> Iterator[T]:
         """Iterates  over all messages (from last interaction)."""
-        pass
 
-    def get_last_response(self) -> Optional[T]:
+    def get_last_response(self) -> T | None:
         """Get last response."""
         last_interaction = self.get_last_interaction()
         if last_interaction:
@@ -191,8 +189,8 @@ class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
     """Chat session model."""
 
     uid: str = Field(default_factory=lambda: uuid.uuid4().hex)
-    datetime: str = Field(default_factory=lambda: str(datetime.now()))
-    interactions: List[AIModelInteraction[T]] = Field(default_factory=list)
+    datetime: str = Field(default_factory=lambda: str(datetime.now(UTC)))
+    interactions: list[AIModelInteraction[T]] = Field(default_factory=list)
 
     @override
     def add_interaction(self, interaction: AIModelInteraction[T]):
@@ -203,15 +201,14 @@ class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
         """Iterates  over all messages (from last interaction)"""
         last_interaction = self.get_last_interaction()
         if last_interaction:
-            for message in last_interaction.history:
-                yield message
+            yield from last_interaction.history
             if last_interaction.message:
                 yield last_interaction.message
                 last_response = self.get_last_response()
                 if last_response:
                     yield last_response
 
-    def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
+    def get_last_interaction(self) -> AIModelInteraction[T] | None:
         """Get last interaction."""
         if self.interactions:
             return self.interactions[-1]
@@ -234,7 +231,7 @@ class AIChatSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
 
 
 class AIAgentInteraction[T: AIModelInteractionMessage](BaseModel):
-    agent_name: Optional[str] = None
+    agent_name: str | None = None
     interaction: AIModelInteraction[T]
 
 
@@ -246,7 +243,7 @@ class AIAgentSession[T: AIModelInteractionMessage](AIModelSession[T]):
     with the agent name differentiator.
     """
 
-    def __init__(self, agent_name: str, interactions: List[AIAgentInteraction]):
+    def __init__(self, agent_name: str, interactions: list[AIAgentInteraction]):
         self.agent_name = agent_name
         self.interactions = interactions
 
@@ -255,7 +252,7 @@ class AIAgentSession[T: AIModelInteractionMessage](AIModelSession[T]):
         self.interactions.append(AIAgentInteraction(agent_name=self.agent_name, interaction=interaction))
 
     @override
-    def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
+    def get_last_interaction(self) -> AIModelInteraction[T] | None:
         """Get last response."""
         if self.interactions:
             for i in reversed(self.interactions):
@@ -269,8 +266,7 @@ class AIAgentSession[T: AIModelInteractionMessage](AIModelSession[T]):
         if self.interactions:
             for i in reversed(self.interactions):
                 if i.agent_name == self.agent_name:
-                    for message in i.interaction.history:
-                        yield message
+                    yield from i.interaction.history
                     if i.interaction.message:
                         yield i.interaction.message
                     if i.interaction.response_message:
@@ -282,8 +278,8 @@ class AIAgentSession[T: AIModelInteractionMessage](AIModelSession[T]):
 class AIMultiagentSession[T: AIModelInteractionMessage](BaseModel, AIModelSession[T]):
     """Supervisor session model. It can create agent sessions."""
 
-    interactions: List[AIAgentInteraction[T]] = Field(default_factory=list)
-    agent_name: Optional[str] = None
+    interactions: list[AIAgentInteraction[T]] = Field(default_factory=list)
+    agent_name: str | None = None
 
     def create_agent_session(self, agent_name: str) -> AIModelSession[T]:
         """Create agent session."""
@@ -293,7 +289,7 @@ class AIMultiagentSession[T: AIModelInteractionMessage](BaseModel, AIModelSessio
     def add_interaction(self, interaction: AIModelInteraction[T]):
         self.interactions.append(AIAgentInteraction[T](agent_name=self.agent_name, interaction=interaction))
 
-    def get_last_interaction(self) -> Optional[AIModelInteraction[T]]:
+    def get_last_interaction(self) -> AIModelInteraction[T] | None:
         """Get last interaction."""
         if self.interactions:
             for i in reversed(self.interactions):
@@ -302,7 +298,7 @@ class AIMultiagentSession[T: AIModelInteractionMessage](BaseModel, AIModelSessio
         return None
 
     @override
-    def get_last_response(self) -> Optional[T]:
+    def get_last_response(self) -> T | None:
         """Get last response."""
         if self.interactions:
             for i in reversed(self.interactions):
@@ -316,8 +312,7 @@ class AIMultiagentSession[T: AIModelInteractionMessage](BaseModel, AIModelSessio
         if self.interactions:
             for i in reversed(self.interactions):
                 if i.agent_name == self.agent_name:
-                    for message in i.interaction.history:
-                        yield message
+                    yield from i.interaction.history
                     if i.interaction.message:
                         yield i.interaction.message
                     if i.interaction.response_message:
@@ -348,10 +343,10 @@ class AIFunction(BaseModel):
     """AI function model."""
 
     name: str
-    description: Optional[str] = None
-    parameters: List[AIFunctionParameter]
-    return_type: Optional[str] = None
-    return_description: Optional[str] = None
+    description: str | None = None
+    parameters: list[AIFunctionParameter]
+    return_type: str | None = None
+    return_description: str | None = None
 
 
 class AITask(AIFunction):
