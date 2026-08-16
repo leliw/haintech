@@ -81,6 +81,7 @@ class AIModelInteractionMessage(BaseModel):
     blob_locations: list[BlobLocation] = Field(default_factory=list)
     blobs: list[Blob] | None = Field(exclude=True, repr=False, default_factory=list)
     tool_calls: list[AIModelToolCall] | None = None
+    vendor_model_name: str | None = None
 
     @classmethod
     def create_from_response(cls, response: AIChatResponse):
@@ -88,6 +89,7 @@ class AIModelInteractionMessage(BaseModel):
             role="assistant",
             content=response.content,
             tool_calls=response.tool_calls,
+            vendor_model_name=response.vendor_model_name,
         )
 
     def __str__(self) -> str:

@@ -27,7 +27,4 @@ class DeepSeekAIModel(OpenAIModel):
             api_key=os.getenv("DEEP_SEEK_API_KEY"),
             base_url="https://api.deepseek.com",
         )
-        self.model_name = model_name
-        if parameters and isinstance(parameters, dict):
-            parameters = OpenAIParameters.model_validate(parameters)
-        self.parameters = parameters or OpenAIParameters()
+        super().__init__(model_name, parameters)

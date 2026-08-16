@@ -46,8 +46,8 @@ class OpenAIModel(BaseAIModel):
         model_name: str = "gpt-4o-mini",
         parameters: Optional[OpenAIParameters | Dict[str, Any]] = None,
     ):
+        super().__init__(model_name)        
         self.setup()
-        self.model_name = model_name
         if parameters and isinstance(parameters, dict):
             parameters = OpenAIParameters(**parameters)
         self.parameters = parameters or OpenAIParameters()

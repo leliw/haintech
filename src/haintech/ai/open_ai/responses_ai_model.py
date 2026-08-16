@@ -54,7 +54,7 @@ class ResponsesAIModel(BaseAIModel):
         model_name: str = "gpt-5.4-nano",
         parameters: ResponsesAIParameters | dict[str, Any] | None = None,
     ):
-        self.model_name = model_name
+        super().__init__(model_name)
         self.parameters = parameters or ResponsesAIParameters()
 
     @classmethod

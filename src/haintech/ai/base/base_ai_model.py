@@ -42,8 +42,7 @@ class BaseAIModel(ABC):
         _log.warning("Method get_model_names_async() for class %s is not defined!", cls.__name__)
         return cls.get_model_names(task)
 
-    @abstractmethod
-    def __init__(self, model_name: str, parameters: dict[str, str | int | float] | None = None):
+    def __init__(self, model_name: str):
         self.model_name = model_name
 
     def get_vendor_model_name(self) -> str:

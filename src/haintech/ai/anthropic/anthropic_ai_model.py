@@ -45,9 +45,8 @@ class AnthropicAIModel(BaseAIModel):
         model_name: str = "claude-haiku-4-5-20251001",
         parameters: dict[str, str | int | float] | None = None,
     ):
+        super().__init__(model_name)
         self.NOT_GIVEN = anthropic.NOT_GIVEN
-
-        self.model_name = model_name
         self.parameters = parameters or {}
         if "max_tokens" not in self.parameters:
             self.parameters["max_tokens"] = 1000

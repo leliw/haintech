@@ -67,9 +67,9 @@ class GoogleAIModel(BaseAIModel):
         parameters: GenerationConfig | dict[str, Any] | None = None,
         api_key: str | None = None,
     ):
+        super().__init__(model_name)
         if api_key:
             self._api_key = api_key
-        self.model_name = model_name
         if not parameters:
             self.parameters = GenerationConfig()
         elif isinstance(parameters, GenerationConfig):

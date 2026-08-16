@@ -47,9 +47,9 @@ class GoogleAIModel(BaseAIModel):
         parameters: Optional[GenerationConfig | Dict[str, Any]] = None,
         api_key: Optional[str] = None,
     ):
+        super().__init__(model_name)
         if api_key:
             self.setup(api_key=api_key)
-        self.model_name = model_name
         self.parameters = parameters
 
     @classmethod
