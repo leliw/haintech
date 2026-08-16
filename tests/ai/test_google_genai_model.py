@@ -38,6 +38,8 @@ def test_get_chat_response(ai_model: GoogleAIModel):
         message=AIModelInteractionMessage(role="user", content="What is the capital of France?"),
     )
     assert response.content and "Paris" in response.content
+    assert response.input_tokens
+    assert response.output_tokens
 
 
 @pytest.mark.parametrize("file_name", ["answer.pdf", "answer.png"])

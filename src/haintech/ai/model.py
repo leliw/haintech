@@ -56,6 +56,7 @@ class AIChatResponse(BaseModel):
     input_tokens: int | None = None
     input_tokens_cached: int | None = None
     reasoning_tokens: int | None = None
+    tool_use_tokens: int | None = None
     output_tokens: int | None = None
 
     def __str__(self) -> str:
@@ -274,7 +275,7 @@ class AIAgentSession[T: AIModelInteractionMessage](AIModelSession[T]):
                         yield i.interaction.message
                     if i.interaction.response_message:
                         yield i.interaction.response_message
-                    # I've found the last interation for the agent
+                    # I've found the last interaction for the agent
                     return
 
 
@@ -320,7 +321,7 @@ class AIMultiagentSession[T: AIModelInteractionMessage](BaseModel, AIModelSessio
                         yield i.interaction.message
                     if i.interaction.response_message:
                         yield i.interaction.response_message
-                    # I've found the last interation for the agent
+                    # I've found the last interaction for the agent
                     return
 
     def __str__(self) -> str:
