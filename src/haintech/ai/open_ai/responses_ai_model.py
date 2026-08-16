@@ -357,7 +357,7 @@ class ResponsesAIModel(BaseAIModel):
         return AIChatResponse(
             content=resp.output_text,
             tool_calls=tool_calls or None,
-            vendor_model_name=self.get_vendor_name(),
+            vendor_model_name=self.get_vendor_model_name(),
             input_tokens=input_tokens,
             input_tokens_cached=input_tokens_cached,
             reasoning_tokens=reasoning_tokens,

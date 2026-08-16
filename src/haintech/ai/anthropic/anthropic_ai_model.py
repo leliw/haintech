@@ -231,7 +231,7 @@ class AnthropicAIModel(BaseAIModel):
                 )
         content = "".join(content_parts) if content_parts else None
         return AIChatResponse(
-            vendor_model_name=self.get_vendor_name(),
+            vendor_model_name=self.get_vendor_model_name(),
             content=content,
             tool_calls=tool_calls,
         )

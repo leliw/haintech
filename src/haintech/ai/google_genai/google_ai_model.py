@@ -463,7 +463,7 @@ class GoogleAIModel(BaseAIModel):
         return AIChatResponse(
             content="\n".join(texts) or None,
             tool_calls=tool_calls or None,
-            vendor_model_name=self.get_vendor_name(),
+            vendor_model_name=self.get_vendor_model_name(),
             input_tokens=usage.prompt_token_count if usage else None,
             input_tokens_cached=usage.cached_content_token_count if usage else None,
             reasoning_tokens=usage.thoughts_token_count if usage else None,
