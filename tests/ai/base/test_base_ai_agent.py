@@ -1,8 +1,9 @@
+import pytest
 from ampf.local import LocalFactory
+
 from haintech.ai.base import BaseAIAgent
 from haintech.ai.google_genai import GoogleAIModel, GoogleAIParameters
 from haintech.ai.model import AIChatSession, AIModelInteractionMessage
-import pytest
 
 
 @pytest.mark.parametrize("file_name", ["answer.txt", "answer.pdf", "answer.png"])
@@ -11,7 +12,9 @@ def test_get_response_with_blob_location(file_name: str):
     factory = LocalFactory("./tests/data")
     ai_model = GoogleAIModel("gemini-2.5-flash-lite", parameters=GoogleAIParameters(temperature=0))
     session = AIChatSession()
-    ai_agent = BaseAIAgent(ai_model=ai_model, system_prompt="You are a helpful assistant.", session=session, session_blob_manager=factory)
+    ai_agent = BaseAIAgent(
+        ai_model=ai_model, system_prompt="You are a helpful assistant.", session=session, session_blob_manager=factory
+    )
     # And: A blob with answer
     blob_location = factory.create_blob_location(file_name)
     # When: Ask for a response
