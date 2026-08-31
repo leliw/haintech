@@ -1,8 +1,9 @@
 import base64
 import json
 import logging
+from collections.abc import Callable, Iterable
 from contextlib import contextmanager
-from typing import Any, Callable, Iterable, Literal, Optional, Protocol
+from typing import Any, ClassVar, Literal, Protocol
 
 import pytest
 from pydantic import BaseModel, field_serializer, field_validator
@@ -13,7 +14,7 @@ from haintech.ai.base.base_ai_model import BaseAIModel
 from haintech.ai.model import AIPrompt
 
 try:
-    from haintech.ai.google_genai import GoogleAIModel  # noqa: F401, F811
+    from haintech.ai.google_genai import GoogleAIModel
     from haintech.ai.google_generativeai import GoogleAIModel  # noqa: F401, F811
 
     GOOGLE_AVAILABLE = True
@@ -48,26 +49,26 @@ class GetChatResponse(Protocol):
     def __call__(
         self,
         *,
-        system_prompt: Optional[str | AIPrompt] = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[dict[Callable[..., Any], Any]] = None,
-        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        system_prompt: str | AIPrompt | None = None,
+        history: Iterable[AIModelInteractionMessage] | None = None,
+        context: AIContext | None = None,
+        message: AIModelInteractionMessage | None = None,
+        functions: dict[Callable[..., Any], Any] | None = None,
+        interaction_logger: Callable[[AIModelInteraction], None] | None = None,
         response_format: Literal["text", "json"] | dict[str, Any] = "text",
     ) -> AIChatResponse: ...
 
 
 class AICall(BaseModel):
-    system_prompt: Optional[str] = None
-    message_str: Optional[str] = None
-    message_containing: Optional[str] = None
-    blob_contents: Optional[list[bytes]] = None
-    tool_result: Optional[str] = None
+    system_prompt: str | None = None
+    message_str: str | None = None
+    message_containing: str | None = None
+    blob_contents: list[bytes] | None = None
+    tool_result: str | None = None
     response: AIChatResponse
 
     @field_serializer("blob_contents")
-    def serialize_blobs(self, value: Optional[list[bytes]]) -> Optional[list[str]]:
+    def serialize_blobs(self, value: list[bytes] | None) -> list[str] | None:
         if value is None:
             return None
         return [base64.b64encode(b).decode("utf-8") for b in value]
@@ -81,12 +82,12 @@ class AICall(BaseModel):
 
     def __call__(
         self,
-        system_prompt: Optional[str | AIPrompt] = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[dict[Callable[..., Any], Any]] = None,
-        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        system_prompt: str | AIPrompt | None = None,
+        history: Iterable[AIModelInteractionMessage] | None = None,
+        context: AIContext | None = None,
+        message: AIModelInteractionMessage | None = None,
+        functions: dict[Callable[..., Any], Any] | None = None,
+        interaction_logger: Callable[[AIModelInteraction], None] | None = None,
         response_format: Literal["text", "json"] | dict[str, Any] = "text",
     ) -> AIChatResponse:
         if self.system_prompt:
@@ -108,7 +109,7 @@ class AICall(BaseModel):
             assert len(self.blob_contents) == len(message.blobs), (
                 f"Expected {len(self.blob_contents)} blobs, got {len(message.blobs)}"
             )
-            assert all([blob.content in self.blob_contents for blob in message.blobs]), (
+            assert all(blob.content in self.blob_contents for blob in message.blobs), (
                 f"Expected blobs {self.blob_contents}, got {[blob.content for blob in message.blobs]}"
             )
         if self.tool_result:
@@ -123,7 +124,7 @@ class AICall(BaseModel):
 
 
 class MockerAIModel:
-    _mocked_methods: list[str] = []
+    _mocked_methods: ClassVar[list[str]] = []
 
     if GOOGLE_AVAILABLE:
         _mocked_methods.append("haintech.ai.google_generativeai.GoogleAIModel.get_chat_response")
@@ -177,11 +178,11 @@ class MockerAIModel:
     def add(
         self,
         response: str | AIChatResponse,
-        message: Optional[str] = None,
-        message_containing: Optional[str] = None,
-        system_prompt: Optional[str] = None,
-        tool_result: Optional[str] = None,
-        blob_contents: Optional[list[bytes]] = None,
+        message: str | None = None,
+        message_containing: str | None = None,
+        system_prompt: str | None = None,
+        tool_result: str | None = None,
+        blob_contents: list[bytes] | None = None,
     ) -> None:
         """Adds a mocked AI response.
 
@@ -209,12 +210,12 @@ class MockerAIModel:
 
     def get_chat_response(
         self,
-        system_prompt: Optional[str] = None,
-        history: Optional[Iterable[AIModelInteractionMessage]] = None,
-        context: Optional[AIContext] = None,
-        message: Optional[AIModelInteractionMessage] = None,
-        functions: Optional[dict[Callable, Any]] = None,
-        interaction_logger: Optional[Callable[[AIModelInteraction], None]] = None,
+        system_prompt: str | None = None,
+        history: Iterable[AIModelInteractionMessage] | None = None,
+        context: AIContext | None = None,
+        message: AIModelInteractionMessage | None = None,
+        functions: dict[Callable, Any] | None = None,
+        interaction_logger: Callable[[AIModelInteraction], None] | None = None,
         response_format: Literal["text", "json"] | dict = "text",
     ) -> AIChatResponse:
         history = list(history or self._history)

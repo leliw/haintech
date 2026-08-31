@@ -5,7 +5,7 @@ from haintech.ai.google_genai import GoogleAIModel
 def test_get_ai_model_names():
     # Given: A factory with Google model
     factory = AIModelFactory()
-    factory.add_ai_model_class("google", GoogleAIModel)
+    factory.add_ai_model_class(GoogleAIModel)
     # When: Get model names
     ret = factory.get_ai_model_names()
     # Then: Gemini model is returned
@@ -15,7 +15,7 @@ def test_get_ai_model_names():
 async def test_get_ai_model_names_async():
     # Given: A factory with Google model
     factory = AIModelFactory()
-    factory.add_ai_model_class("google", GoogleAIModel)
+    factory.add_ai_model_class(GoogleAIModel)
     # When: Get model names
     ret = await factory.get_ai_model_names_async()
     # Then: Gemini model is returned
@@ -25,7 +25,7 @@ async def test_get_ai_model_names_async():
 
 def test_create_ai_model():
     # Given: A factory with Google model
-    factory = AIModelFactory({"google": GoogleAIModel})
+    factory = AIModelFactory([GoogleAIModel])
     # And: vendor_model_name
     name = factory.get_ai_model_names()[0]
     # When: Create AI model

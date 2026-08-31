@@ -25,6 +25,10 @@ class AnthropicAIModel(BaseAIModel):
     _models: list[ModelInfo] | None = None
 
     @classmethod
+    def get_vendor_name(cls) -> str:
+        return "anthropic"
+
+    @classmethod
     def get_client(cls) -> anthropic.Anthropic:
         if not cls._client:
             cls._client = anthropic.Anthropic()
@@ -41,9 +45,8 @@ class AnthropicAIModel(BaseAIModel):
         model_name: str = "claude-haiku-4-5-20251001",
         parameters: dict[str, str | int | float] | None = None,
     ):
+        super().__init__(model_name)
         self.NOT_GIVEN = anthropic.NOT_GIVEN
-
-        self.model_name = model_name
         self.parameters = parameters or {}
         if "max_tokens" not in self.parameters:
             self.parameters["max_tokens"] = 1000
@@ -212,8 +215,7 @@ class AnthropicAIModel(BaseAIModel):
             ret = {"role": role, "content": content}
         return ret
 
-    @classmethod
-    def _create_ai_chat_response(cls, lm_resp: list[BaseModel]) -> AIChatResponse:
+    def _create_ai_chat_response(self, lm_resp: list[BaseModel]) -> AIChatResponse:
         content_parts = []
         tool_calls = []
         for m_resp in lm_resp:
@@ -227,7 +229,11 @@ class AnthropicAIModel(BaseAIModel):
                     )
                 )
         content = "".join(content_parts) if content_parts else None
-        return AIChatResponse(content=content, tool_calls=tool_calls)
+        return AIChatResponse(
+            vendor_model_name=self.get_vendor_model_name(),
+            content=content,
+            tool_calls=tool_calls,
+        )
 
     @classmethod
     def model_function_definition(cls, ai_function: AIFunction) -> dict[str, Any]:

@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from typing import Any, override
+from warnings import deprecated
 
 from ampf.base import Blob, BlobLocation
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -37,10 +38,10 @@ class RAGItem(BaseModel):
 class AIModelToolCall(BaseModel):
     """Tool call request returned by AIModel"""
 
-    id: str | None = None
+    id: str
     function_name: str
     arguments: dict[str, Any]
-    thought_signature: str | None = Field(None, description="Thought signature required by Google API")
+    thought_signature: str | None = Field(default=None, description="Thought signature required by Google API")
 
     def __str__(self):
         return f"{self.id}: {self.function_name}({', '.join([f'{k}="{v}"' for k, v in self.arguments.items()])})"
@@ -51,9 +52,11 @@ class AIChatResponse(BaseModel):
 
     content: str | None = None
     tool_calls: list[AIModelToolCall] | None = None
+    vendor_model_name: str | None = None
     input_tokens: int | None = None
     input_tokens_cached: int | None = None
     reasoning_tokens: int | None = None
+    tool_use_tokens: int | None = None
     output_tokens: int | None = None
 
     def __str__(self) -> str:
@@ -78,6 +81,7 @@ class AIModelInteractionMessage(BaseModel):
     blob_locations: list[BlobLocation] = Field(default_factory=list)
     blobs: list[Blob] | None = Field(exclude=True, repr=False, default_factory=list)
     tool_calls: list[AIModelToolCall] | None = None
+    vendor_model_name: str | None = None
 
     @classmethod
     def create_from_response(cls, response: AIChatResponse):
@@ -85,6 +89,7 @@ class AIModelInteractionMessage(BaseModel):
             role="assistant",
             content=response.content,
             tool_calls=response.tool_calls,
+            vendor_model_name=response.vendor_model_name,
         )
 
     def __str__(self) -> str:
@@ -106,6 +111,7 @@ class AIModelInteractionTool(BaseModel):
     function: Any
 
 
+@deprecated("Use just string")
 class AIPrompt(BaseModel):
     """Structured AI prompt model.
 
@@ -271,7 +277,7 @@ class AIAgentSession[T: AIModelInteractionMessage](AIModelSession[T]):
                         yield i.interaction.message
                     if i.interaction.response_message:
                         yield i.interaction.response_message
-                    # I've found the last interation for the agent
+                    # I've found the last interaction for the agent
                     return
 
 
@@ -317,7 +323,7 @@ class AIMultiagentSession[T: AIModelInteractionMessage](BaseModel, AIModelSessio
                         yield i.interaction.message
                     if i.interaction.response_message:
                         yield i.interaction.response_message
-                    # I've found the last interation for the agent
+                    # I've found the last interaction for the agent
                     return
 
     def __str__(self) -> str:

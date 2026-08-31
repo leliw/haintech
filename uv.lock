@@ -872,7 +872,7 @@ wheels = [
 
 [[package]]
 name = "haintech"
-version = "0.10.0b1"
+version = "0.10.2b3"
 source = { editable = "." }
 dependencies = [
     { name = "ampf" },

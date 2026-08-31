@@ -54,6 +54,10 @@ class GoogleAIModel(BaseAIModel):
     _models_list: list[Model] | None = None
 
     @classmethod
+    def get_vendor_name(cls) -> str:
+        return "google"
+
+    @classmethod
     def setup(cls, api_key: str | None = None):
         cls._api_key = api_key
 
@@ -63,9 +67,9 @@ class GoogleAIModel(BaseAIModel):
         parameters: GenerationConfig | dict[str, Any] | None = None,
         api_key: str | None = None,
     ):
+        super().__init__(model_name)
         if api_key:
             self._api_key = api_key
-        self.model_name = model_name
         if not parameters:
             self.parameters = GenerationConfig()
         elif isinstance(parameters, GenerationConfig):
@@ -417,8 +421,7 @@ class GoogleAIModel(BaseAIModel):
             parameters=parameters,
         )
 
-    @classmethod
-    def _create_response_from_content_response(cls, n_resp: GenerateContentResponse) -> AIChatResponse:
+    def _create_response_from_content_response(self, n_resp: GenerateContentResponse) -> AIChatResponse:
         """Converts protos.GenerateContentResponse to AIChatResponse
 
         Args:
@@ -456,9 +459,17 @@ class GoogleAIModel(BaseAIModel):
                 )
             if part.text:
                 texts.append(part.text)
+        usage = n_resp.usage_metadata
         return AIChatResponse(
             content="\n".join(texts) or None,
             tool_calls=tool_calls or None,
+            vendor_model_name=self.get_vendor_model_name(),
+            input_tokens=usage.prompt_token_count if usage else None,
+            input_tokens_cached=usage.cached_content_token_count if usage else None,
+            reasoning_tokens=usage.thoughts_token_count if usage else None,
+            tool_use_tokens= usage.tool_use_prompt_token_count if usage else None,
+            output_tokens= usage.candidates_token_count if usage else None,
+
         )
 
     try:

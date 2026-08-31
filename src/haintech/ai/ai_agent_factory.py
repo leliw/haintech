@@ -7,6 +7,7 @@ from haintech.ai.base.base_agent_searcher import BaseAgentSearcher
 from haintech.ai.base.base_ai_agent_async import BaseAIAgentAsync
 from haintech.ai.base.base_ai_model import BaseAIModel
 from haintech.ai.interfaces.async_session_blob_manager import AsyncSessionBlobManager
+from haintech.ai.model import AIModelSession
 
 _log = logging.getLogger(__name__)
 
@@ -31,7 +32,7 @@ class AIAgentFactory:
     @classmethod
     def create(
         cls,
-        ai_model_classes: dict[str, type[BaseAIModel]],
+        ai_model_classes: list[type[BaseAIModel]],
         searcher: BaseAgentSearcher | None = None,
         session_blob_manager: AsyncSessionBlobManager | None = None,
         functions: list[Callable] | None = None,
@@ -54,6 +55,7 @@ class AIAgentFactory:
         self,
         vendor_model_name: str,
         system_prompt: str | None = None,
+        session: AIModelSession | None = None,
         searcher: BaseAgentSearcher | None = None,
         functions: list[Callable] | list[str] | None = None,
         session_blob_manager: AsyncSessionBlobManager | None = None,
@@ -66,6 +68,7 @@ class AIAgentFactory:
         return BaseAIAgentAsync(
             ai_model=self.create_ai_model(vendor_model_name, ai_model_parameters),
             system_prompt=system_prompt,
+            session=session,
             searcher=searcher or self.searcher,
             functions=fns,
             session_blob_manager=session_blob_manager or self.session_blob_manager,

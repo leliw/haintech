@@ -42,6 +42,10 @@ class ResponsesAIModel(BaseAIModel):
     _models_list: list[Model] | None = None
 
     @classmethod
+    def get_vendor_name(cls) -> str:
+        return "openai"
+
+    @classmethod
     def setup(cls, api_key: str | None = None):
         cls._api_key = api_key
 
@@ -50,7 +54,7 @@ class ResponsesAIModel(BaseAIModel):
         model_name: str = "gpt-5.4-nano",
         parameters: ResponsesAIParameters | dict[str, Any] | None = None,
     ):
-        self.model_name = model_name
+        super().__init__(model_name)
         self.parameters = parameters or ResponsesAIParameters()
 
     @classmethod
@@ -334,8 +338,7 @@ class ResponsesAIModel(BaseAIModel):
         _log.debug("Creating message: %s", m)
         return ret  # type: ignore
 
-    @classmethod
-    def _create_ai_chat_response(cls, resp: Response) -> AIChatResponse:
+    def _create_ai_chat_response(self, resp: Response) -> AIChatResponse:
         input_tokens = resp.usage.input_tokens if resp.usage else None
         input_tokens_cached = resp.usage.input_tokens_details.cached_tokens if resp.usage else None
         reasoning_tokens = resp.usage.output_tokens_details.reasoning_tokens if resp.usage else None
@@ -354,6 +357,7 @@ class ResponsesAIModel(BaseAIModel):
         return AIChatResponse(
             content=resp.output_text,
             tool_calls=tool_calls or None,
+            vendor_model_name=self.get_vendor_model_name(),
             input_tokens=input_tokens,
             input_tokens_cached=input_tokens_cached,
             reasoning_tokens=reasoning_tokens,
