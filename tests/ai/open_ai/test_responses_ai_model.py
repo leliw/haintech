@@ -7,7 +7,7 @@ from haintech.ai.open_ai.model import ResponsesAIParameters
 from haintech.ai.open_ai.responses_ai_model import ResponsesAIModel
 
 
-@pytest.fixture(params=["gpt-4o-mini", "gpt-4.1-mini", "gpt-5-mini", "gpt-5.1", "gpt-5.4-nano"])
+@pytest.fixture(params=["gpt-5-mini", "gpt-5.1", "gpt-5.4-nano", "gpt-5.6-luna"])
 # @pytest.fixture(params=["gpt-5.4-nano"])
 def ai_model(request: pytest.FixtureRequest) -> ResponsesAIModel:
     return ResponsesAIModel(request.param, parameters=ResponsesAIParameters(temperature=0.1))
@@ -22,9 +22,8 @@ def test_get_chat_response(ai_model: ResponsesAIModel):
 
 
 def test_get_model_names():
-    ai_model = ResponsesAIModel("gpt-4o-mini")
-    model_names = ai_model.get_model_names()
-    assert "gpt-4o-mini" in model_names
+    model_names = ResponsesAIModel.get_model_names()
+    assert "gpt-5.6-luna" in model_names
 
 
 class Book(BaseModel):
