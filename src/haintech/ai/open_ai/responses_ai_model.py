@@ -2,7 +2,7 @@ import json
 import logging
 from collections.abc import Callable, Iterable, Sequence
 from itertools import chain
-from typing import Any, Literal, override
+from typing import Any, ClassVar, Literal, override
 
 from openai import AsyncOpenAI, OpenAI
 from openai.types import Model
@@ -36,22 +36,27 @@ _log = logging.getLogger(__name__)
 class ResponsesAIModel(BaseAIModel):
     """OpenAI implementation of BaseAIModel"""
 
-    _api_key: str | None = None
-    _openai: OpenAI | None = None
-    _async_openai: AsyncOpenAI | None = None
-    _models_list: list[Model] | None = None
+    _api_key: ClassVar[str | None] = None
+    _base_url: ClassVar[str | None] = None
+    _openai: ClassVar[OpenAI | None] = None
+    _async_openai: ClassVar[AsyncOpenAI | None] = None
+    _models_list: ClassVar[list[Model] | None] = None
 
     @classmethod
     def get_vendor_name(cls) -> str:
         return "openai"
 
     @classmethod
-    def setup(cls, api_key: str | None = None):
+    def setup(cls, api_key: str | None = None, base_url: str | None = None):
         cls._api_key = api_key
+        cls._base_url = base_url
+        cls._openai = None
+        cls._async_openai = None
+        cls._models_list = None
 
     def __init__(
         self,
-        model_name: str = "gpt-5.4-nano",
+        model_name: str = "gpt-5.6-luna",
         parameters: ResponsesAIParameters | dict[str, Any] | None = None,
     ):
         super().__init__(model_name)
@@ -60,13 +65,13 @@ class ResponsesAIModel(BaseAIModel):
     @classmethod
     def get_openai(cls) -> OpenAI:
         if not cls._openai:
-            cls._openai = OpenAI(api_key=cls._api_key)
+            cls._openai = OpenAI(api_key=cls._api_key, base_url=cls._base_url)
         return cls._openai
 
     @classmethod
     def get_async_openai(cls) -> AsyncOpenAI:
         if not cls._async_openai:
-            cls._async_openai = AsyncOpenAI(api_key=cls._api_key)
+            cls._async_openai = AsyncOpenAI(api_key=cls._api_key, base_url=cls._base_url)
         return cls._async_openai
 
     @override
@@ -211,10 +216,10 @@ class ResponsesAIModel(BaseAIModel):
         if functions:
             tools = list(functions.values())
         else:
-            tools = None
+            tools = []
 
         if response_format == "text":
-            response_format_dict = None
+            response_format_dict = {"format": {"type": "text"}}
         elif response_format == "json":
             response_format_dict = {"format": {"type": "json_object"}}
         elif isinstance(response_format, dict):
@@ -269,7 +274,7 @@ class ResponsesAIModel(BaseAIModel):
                 if text_blob_contents:
                     text_blob_contents += "\n"
                 text_blob_contents += m.content
-                ret.append(EasyInputMessageParam(role=m.role, content=text_blob_contents))  # pyright: ignore[reportArgumentType]
+                ret.append(EasyInputMessageParam(role=m.role, content=text_blob_contents, type="message"))  # pyright: ignore[reportArgumentType]
             if m.tool_calls:
                 for c in m.tool_calls:
                     if not c.id:

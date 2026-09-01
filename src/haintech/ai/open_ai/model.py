@@ -21,5 +21,7 @@ class ResponsesAIParameters(BaseModel):
     def get_for_model(self, model_name: str) -> dict:
         if model_name.startswith("gpt-5-") or model_name == "gpt-5":
             return self.model_dump(exclude_none=True, exclude={"temperature"})
+        elif model_name.startswith("gpt-5.6"):
+            return {}
         else:
             return self.model_dump(exclude_none=True)
