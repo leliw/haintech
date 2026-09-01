@@ -10,7 +10,7 @@
         "--no-cov-on-fail",
         "--disable-warnings",
         "--show-capture=log",
-        "--show-capture=stdout",
+        // "--show-capture=stdout",
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
