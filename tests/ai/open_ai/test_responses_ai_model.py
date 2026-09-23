@@ -8,7 +8,7 @@ from haintech.ai.open_ai.responses_ai_model import ResponsesAIModel
 
 
 @pytest.fixture(params=["gpt-5-mini", "gpt-5.1", "gpt-5.4-nano", "gpt-5.6-luna"])
-# @pytest.fixture(params=["gpt-5.4-nano"])
+# @pytest.fixture(params=["gpt-5.6-luna"])
 def ai_model(request: pytest.FixtureRequest) -> ResponsesAIModel:
     return ResponsesAIModel(request.param, parameters=ResponsesAIParameters(temperature=0.1))
 
@@ -30,7 +30,7 @@ class Book(BaseModel):
     title: str
     author: str
     year: int
-    genre: str
+    genre: str | None = None
 
 
 def test_get_response(ai_model: ResponsesAIModel):

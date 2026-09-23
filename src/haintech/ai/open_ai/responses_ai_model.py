@@ -521,4 +521,7 @@ class ResponsesAIModel(BaseAIModel):
         schema.pop("title", None)
         schema.pop("description", None)
         schema["additionalProperties"] = False
+        # OpenAI requires every property to be listed in "required"
+        if "properties" in schema:
+            schema["required"] = list(schema["properties"].keys())
         return schema
