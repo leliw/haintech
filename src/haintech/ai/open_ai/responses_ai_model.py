@@ -516,12 +516,46 @@ class ResponsesAIModel(BaseAIModel):
     @staticmethod
     def prepare_schema(model: type[BaseModel]) -> dict:
         schema = model.model_json_schema()
-        for v in schema["properties"].values():
-            v.pop("title", None)
-        schema.pop("title", None)
-        schema.pop("description", None)
-        schema["additionalProperties"] = False
-        # OpenAI requires every property to be listed in "required"
-        if "properties" in schema:
-            schema["required"] = list(schema["properties"].keys())
+
+        def clean_and_require(obj: dict) -> None:
+            """Recursively clean schema and force all properties into required."""
+            if not isinstance(obj, dict):
+                return
+
+            # Clean titles / descriptions
+            obj.pop("title", None)
+            obj.pop("description", None)
+
+            props = obj.get("properties")
+            if isinstance(props, dict):
+                for v in props.values():
+                    if isinstance(v, dict):
+                        v.pop("title", None)
+                        v.pop("description", None)
+                        clean_and_require(v)  # nested object / array items etc.
+
+                # OpenAI: every key in properties must be in required
+                obj["required"] = list(props.keys())
+                obj["additionalProperties"] = False
+
+            # Handle $defs / definitions
+            for defs_key in ("$defs", "definitions"):
+                defs = obj.get(defs_key)
+                if isinstance(defs, dict):
+                    for def_schema in defs.values():
+                        clean_and_require(def_schema)
+
+            # Handle anyOf / oneOf / allOf if present
+            for key in ("anyOf", "oneOf", "allOf"):
+                variants = obj.get(key)
+                if isinstance(variants, list):
+                    for variant in variants:
+                        clean_and_require(variant)
+
+            # items (for arrays)
+            items = obj.get("items")
+            if isinstance(items, dict):
+                clean_and_require(items)
+
+        clean_and_require(schema)
         return schema

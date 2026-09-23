@@ -32,6 +32,9 @@ class Book(BaseModel):
     year: int
     genre: str | None = None
 
+class BookShelf(BaseModel):
+    saga: str
+    books: list[Book]
 
 def test_get_response(ai_model: ResponsesAIModel):
     # When: Get text response from ai model
@@ -46,6 +49,14 @@ def test_get_response_typed(ai_model: ResponsesAIModel):
     # Then: Object is returned with the response
     assert isinstance(ret, Book)
     assert "Harry Potter" in ret.title
+
+def test_get_response_typed_nested(ai_model: ResponsesAIModel):
+    # When: Get typed response from ai model
+    ret = ai_model.get_response_typed("Return all Harry Potter books. (in json format)", BookShelf)
+    # Then: Object is returned with the response
+    assert isinstance(ret, BookShelf)
+    assert "Harry Potter" in ret.saga
+
 
 
 def test_get_response_list_typed(ai_model: ResponsesAIModel):
