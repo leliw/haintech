@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 import pytest
 
@@ -7,7 +7,7 @@ from haintech.ai.anthropic import AnthropicAIModel
 from haintech.ai.deep_seek import DeepSeekAIModel
 from haintech.ai.google_genai import GoogleAIModel
 from haintech.ai.open_ai import ResponsesAIModel
-from haintech.testing.mocker_ai_model import MockerAIModel, mocker_ai_model  # noqa: F401
+from haintech.testing.mocker_ai_model import MockerAIModel
 
 
 @pytest.fixture(
@@ -19,7 +19,7 @@ def ai_model(request: pytest.FixtureRequest) -> BaseAIModel:
     return request.param(parameters={"temperature": 0})
 
 
-def test_get_chat_response(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):  # noqa: F811
+def test_get_chat_response(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):
     # Given: A mock with an interaction defined
     mocker_ai_model.add(
         message="Who was the first US president?",
@@ -34,7 +34,7 @@ def test_get_chat_response(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel
 
 
 @pytest.mark.asyncio
-async def test_get_chat_response_async(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):  # noqa: F811
+async def test_get_chat_response_async(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):
     # Given: A mock with an interaction defined
     mocker_ai_model.add(
         message="Who was the first US president?",
@@ -48,7 +48,7 @@ async def test_get_chat_response_async(ai_model: BaseAIModel, mocker_ai_model: M
     assert response.content == "George Washington."
 
 
-def test_recording(mocker_ai_model: MockerAIModel):  # noqa: F811
+def test_recording(mocker_ai_model: MockerAIModel):
     # Given: A real AI model
     ai_model = ResponsesAIModel(parameters={"temperature": 0})
     with pytest.raises(AssertionError):
@@ -65,7 +65,7 @@ def test_recording(mocker_ai_model: MockerAIModel):  # noqa: F811
         # And: Calls are printed in console
 
 
-def test_mock_with_system_prompt(mocker_ai_model: MockerAIModel):  # noqa: F811
+def test_mock_with_system_prompt(mocker_ai_model: MockerAIModel):
     system_prompt = "Always answer `Yes sir!`"
     mocker_ai_model.add(system_prompt=system_prompt, response="Yes sir!")
     ai_model = ResponsesAIModel(parameters={"temperature": 0})
@@ -75,7 +75,7 @@ def test_mock_with_system_prompt(mocker_ai_model: MockerAIModel):  # noqa: F811
 
 
 @pytest.mark.asyncio
-async def test_mock_with_system_prompt_async(mocker_ai_model: MockerAIModel):  # noqa: F811
+async def test_mock_with_system_prompt_async(mocker_ai_model: MockerAIModel):
     system_prompt = "Always answer `Yes sir!`"
     mocker_ai_model.add(system_prompt=system_prompt, response="Yes sir!")
     ai_model = ResponsesAIModel(parameters={"temperature": 0})
@@ -84,7 +84,7 @@ async def test_mock_with_system_prompt_async(mocker_ai_model: MockerAIModel):  #
     assert response == "Yes sir!"
 
 
-def test_add_calls(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):  # noqa: F811
+def test_add_calls(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):
     # Given: A call list returned by record() method
     call_list = [
         {
@@ -102,7 +102,7 @@ def test_add_calls(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):  # no
     assert response.content == "The first US president was **George Washington**."
 
 
-def test_mock_with_history_ok(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):  # noqa: F811
+def test_mock_with_history_ok(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):
     # Given: A mock with two interactions, where the second checks history - it is correct
     mocker_ai_model.add(
         message="Who was the first US president?", response="The first US president was **George Washington**."
@@ -126,7 +126,7 @@ def test_mock_with_history_ok(ai_model: BaseAIModel, mocker_ai_model: MockerAIMo
     assert "John Adams" in response.content
 
 
-def test_mock_with_history_err(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):  # noqa: F811
+def test_mock_with_history_err(ai_model: BaseAIModel, mocker_ai_model: MockerAIModel):
     # Given: A mock with two interactions, where the second checks history - it is wrong
     mocker_ai_model.add(
         message="Who was the first US president?", response="The first US president was **George Washington**."

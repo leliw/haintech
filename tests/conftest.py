@@ -4,7 +4,7 @@ import pytest
 
 from haintech.ai.base.base_ai_model import BaseAIModel
 from haintech.ai.google_genai.google_ai_model import GoogleAIModel
-from haintech.ai.open_ai.open_ai_model import OpenAIModel
+from haintech.ai.open_ai.responses_ai_model import ResponsesAIModel
 
 
 @pytest.fixture
@@ -18,10 +18,10 @@ def log():
 
 @pytest.fixture(
     params=[
-        OpenAIModel(model_name="gpt-5.4-nano", parameters={"temperature": 0}),
+        ResponsesAIModel(model_name="gpt-5.6-luna", parameters={"temperature": 0}),
         GoogleAIModel(model_name="gemini-3.5-flash-lite", parameters={"temperature": 0}),
     ],
-    ids=["OpenAI-nano", "GoogleAI-flash-lite"],
+    ids=["OpenAI-luna", "GoogleAI-flash-lite"],
     scope="session",
 )
 def ai_model_lite(request: pytest.FixtureRequest) -> BaseAIModel:
