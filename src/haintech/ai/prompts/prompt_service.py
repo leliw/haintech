@@ -1,5 +1,6 @@
+import hashlib
+import sys
 from pathlib import Path
-from typing import Dict, Optional, Type
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
@@ -19,7 +20,7 @@ class PromptService:
             lstrip_blocks=True,
         )
 
-        self.registry: Dict[str, PromptSet] = {}
+        self.registry: dict[str, PromptSet] = {}
 
     def load_prompt(self, prompt_path: Path | str) -> PromptSet:
         if isinstance(prompt_path, str):
@@ -33,16 +34,27 @@ class PromptService:
             if output_path.exists():
                 import importlib.util
 
-                spec = importlib.util.spec_from_file_location("output", output_path)
+                module_name = "_prompt_output_" + hashlib.sha256(str(output_path.resolve()).encode()).hexdigest()
+
+                spec = importlib.util.spec_from_file_location(module_name, output_path)
                 if spec and spec.loader:
                     module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
+                    sys.modules[module_name] = module
+                    try:
+                        spec.loader.exec_module(module)
+                    except Exception:
+                        sys.modules.pop(module_name, None)
+                        raise
                     for name in dir(module):
                         attribute = getattr(module, name)
-                        if isinstance(attribute, type):
-                            if issubclass(attribute, BaseOutput) and attribute is not BaseOutput:
-                                output_class = attribute
-                                break
+                        if (
+                            isinstance(attribute, type)
+                            and attribute.__module__ == module_name
+                            and issubclass(attribute, BaseOutput)
+                            and attribute is not BaseOutput
+                        ):
+                            output_class = attribute
+                            break
             if user_path.exists():
                 return PromptSet(
                     name=prompt_path.name,
@@ -53,8 +65,8 @@ class PromptService:
                 )
         raise ValueError(f"Prompt set {prompt_path} not found")
 
-    def load_all_prompts(self) -> Dict[str, PromptSet]:
-        self.registry: Dict[str, PromptSet] = {}
+    def load_all_prompts(self) -> dict[str, PromptSet]:
+        self.registry: dict[str, PromptSet] = {}
 
         for item in self.root_path.iterdir():
             if item.is_dir() and not item.name.startswith("_"):
@@ -74,7 +86,7 @@ class PromptService:
             self.registry[prompt_name] = self.load_prompt(prompt_name)
         return self.registry[prompt_name].render(**kwargs)
 
-    def get_output_class(self, prompt_name: str) -> Optional[Type[BaseOutput]]:
+    def get_output_class(self, prompt_name: str) -> type[BaseOutput] | None:
         if prompt_name not in self.registry:
             self.registry[prompt_name] = self.load_prompt(prompt_name)
         return self.registry[prompt_name].output_class
